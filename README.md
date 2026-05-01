@@ -190,15 +190,28 @@ Deployed on **AWS ap-southeast-2** using Terraform:
 
 ### Environment variables
 
-Copy `apps/api/.env.example` to `apps/api/.env` and fill in the required values (DATABASE_URL, AWS credentials, NODE_ADAPTER_URL, etc.).
+A `.env` file is included at the repo root with safe defaults for local development. The adapter uses bundled mock CDR data (`USE_MOCK_DATA=true`) so no live AWS credentials are required to start. If you want real Bedrock narrative generation or S3 report storage, fill in the AWS fields.
+
+```bash
+# optional: review / override values before first run
+vim .env
+```
 
 ### Run with Docker Compose
 
 ```bash
-docker compose up --build
+docker-compose up -d --build
 ```
 
-This starts all four services. The web app is available at `http://localhost:80` and the API at `http://localhost:8000`.
+This starts all five services (PostgreSQL, node-adapter, backend API, worker, web). 
+
+| Service | URL |
+|---------|-----|
+| Web app | http://localhost:80 |
+| API | http://localhost:8000 |
+| OpenBanking adapter | http://localhost:4000 |
+| Worker health | http://localhost:8001 |
+| PostgreSQL | localhost:5432 |
 
 ### Run services individually
 
