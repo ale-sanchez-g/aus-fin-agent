@@ -12,9 +12,25 @@ configure_logging()
 log = structlog.get_logger()
 
 
+def _log_aws_connectivity() -> None:
+    try:
+        import boto3
+
+        identity = boto3.client("sts", region_name=settings.AWS_REGION).get_caller_identity()
+        log.info(
+            "aws_identity_verified",
+            account=identity.get("Account"),
+            arn=identity.get("Arn"),
+            region=settings.AWS_REGION,
+        )
+    except Exception as exc:
+        log.warning("aws_identity_verification_failed", error=str(exc), region=settings.AWS_REGION)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("startup", environment=settings.ENVIRONMENT)
+    _log_aws_connectivity()
     yield
     log.info("shutdown")
 
