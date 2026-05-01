@@ -26,9 +26,19 @@ export const ProductCategory = {
  */
 
 /**
- * @typedef {Object} ProductRate
- * @property {string} rateType
- * @property {string} rate
+ * @typedef {Object} DepositRate
+ * @property {string} depositRateType - CDR deposit rate type (BASE, BONUS, FIXED, etc.)
+ * @property {string} rate - Rate as decimal string (e.g. "0.0475" for 4.75%)
+ * @property {string} [comparisonRate]
+ * @property {string} [calculationFrequency]
+ * @property {string} [applicationFrequency]
+ * @property {string} [additionalInfo]
+ */
+
+/**
+ * @typedef {Object} LendingRate
+ * @property {string} lendingRateType - CDR lending rate type (VARIABLE, FIXED, PURCHASE, etc.)
+ * @property {string} rate - Rate as decimal string (e.g. "0.0624" for 6.24%)
  * @property {string} [comparisonRate]
  * @property {string} [calculationFrequency]
  * @property {string} [applicationFrequency]
@@ -67,7 +77,7 @@ export const ProductCategory = {
  * @property {string} lastUpdated
  * @property {ProductFeature[]} features
  * @property {ProductFee[]} fees
- * @property {ProductRate[]} depositRates
- * @property {ProductRate[]} lendingRates
+ * @property {DepositRate[]} depositRates
+ * @property {LendingRate[]} lendingRates
  * @property {EligibilityRule[]} eligibility
  */

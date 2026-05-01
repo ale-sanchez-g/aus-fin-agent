@@ -64,7 +64,7 @@ class AdapterClient:
 
     async def list_providers(self) -> list[dict]:
         try:
-            result = await self._get("/api/v1/providers")
+            result = await self._get("/api/providers")
             return result if isinstance(result, list) else result.get("data", [])
         except Exception as exc:
             log.error("adapter_list_providers_failed", error=str(exc))
@@ -74,12 +74,14 @@ class AdapterClient:
         self, provider_id: str = None, category: str = None
     ) -> list[dict]:
         params = {}
-        if provider_id:
-            params["provider_id"] = provider_id
         if category:
             params["category"] = category
         try:
-            result = await self._get("/api/v1/products", params=params)
+            if provider_id:
+                path = f"/api/providers/{provider_id}/products"
+            else:
+                path = "/api/products"
+            result = await self._get(path, params=params)
             return result if isinstance(result, list) else result.get("data", [])
         except Exception as exc:
             log.error("adapter_get_products_failed", error=str(exc))
@@ -87,8 +89,8 @@ class AdapterClient:
 
     async def get_product_detail(self, product_id: str) -> dict:
         try:
-            result = await self._get(f"/api/v1/products/{product_id}")
-            return result if isinstance(result, dict) else {}
+            result = await self._get(f"/api/products/{product_id}")
+            return result.get("data", {}) if isinstance(result, dict) else {}
         except Exception as exc:
             log.error("adapter_get_product_detail_failed", product_id=product_id, error=str(exc))
             return {}

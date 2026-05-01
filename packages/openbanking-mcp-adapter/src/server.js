@@ -62,6 +62,21 @@ app.get('/api/products', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Get product detail by productId only (searches across all providers)
+app.get('/api/products/:productId', async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+    const providers = await listProviders();
+    for (const provider of providers) {
+      const product = await getProductDetail(provider.id, productId);
+      if (product) {
+        return res.json({ data: product, meta: { source: 'cdr_public', timestamp: new Date().toISOString() } });
+      }
+    }
+    return res.status(404).json({ error: 'Product not found' });
+  } catch (err) { next(err); }
+});
+
 app.use(errorHandler);
 
 const server = app.listen(PORT, () => {
