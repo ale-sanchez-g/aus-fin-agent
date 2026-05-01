@@ -1,0 +1,76 @@
+{
+  "session_id": "d94e3207-812b-493a-b9b3-8c9e95bf7aff",
+  "generated_at": "2026-05-01T07:03:05.814225Z",
+  "product_category": "TRANS_AND_SAVINGS_ACCOUNTS",
+  "user_intent": "credit card with rewards",
+  "total_products_evaluated": 0,
+  "total_eligible_products": 0,
+  "top_recommendations": [],
+  "narrative": "No products were found matching your criteria for TRANS_AND_SAVINGS_ACCOUNTS. Consider broadening your search parameters.",
+  "sections": [
+    {
+      "title": "Executive Summary",
+      "content": {
+        "intent": "credit card with rewards",
+        "category": "TRANS_AND_SAVINGS_ACCOUNTS",
+        "products_evaluated": 0,
+        "products_eligible": 0,
+        "top_recommendation": null
+      },
+      "section_type": "summary"
+    },
+    {
+      "title": "Methodology",
+      "content": {
+        "weight_profile": "feature_rich",
+        "scoring_dimensions": [
+          "monthly_fees",
+          "rate_competitiveness",
+          "feature_fit",
+          "eligibility_fit",
+          "digital_capability",
+          "suitability"
+        ],
+        "description": "Products are scored across six dimensions using a weighted scoring model. The 'feature_rich' profile was applied to reflect stated priorities."
+      },
+      "section_type": "methodology"
+    },
+    {
+      "title": "Top Recommendations",
+      "content": [],
+      "section_type": "recommendations"
+    },
+    {
+      "title": "Analysis Narrative",
+      "content": "No products were found matching your criteria for TRANS_AND_SAVINGS_ACCOUNTS. Consider broadening your search parameters.",
+      "section_type": "narrative"
+    },
+    {
+      "title": "Compliance & Disclaimers",
+      "content": {
+        "notes": [
+          "Product information is sourced from the Australian Consumer Data Right (CDR) open banking registry.",
+          "Rates and fees are indicative and subject to change without notice.",
+          "Eligibility criteria apply; verify with the product provider before applying.",
+          "This discovery output does not constitute personal financial advice under the Corporations Act 2001 (Cth).",
+          "AFS licensing obligations apply. This platform operates under a discovery/comparison service model only.",
+          "Analysis is based on publicly available CDR product data only. Consented personal data has not been used in this discovery session.",
+          "This report is for discovery purposes only and does not constitute personal financial advice. Always consult a licensed financial adviser."
+        ],
+        "disclaimer": "This report is for discovery purposes only and does not constitute personal financial advice. Always consult a licensed financial adviser."
+      },
+      "section_type": "compliance"
+    }
+  ],
+  "compliance_notes": [
+    "Product information is sourced from the Australian Consumer Data Right (CDR) open banking registry.",
+    "Rates and fees are indicative and subject to change without notice.",
+    "Eligibility criteria apply; verify with the product provider before applying.",
+    "This discovery output does not constitute personal financial advice under the Corporations Act 2001 (Cth).",
+    "AFS licensing obligations apply. This platform operates under a discovery/comparison service model only.",
+    "Analysis is based on publicly available CDR product data only. Consented personal data has not been used in this discovery session.",
+    "This report is for discovery purposes only and does not constitute personal financial advice. Always consult a licensed financial adviser."
+  ],
+  "disclaimer": "This report is for discovery purposes only and does not constitute personal financial advice. Always consult a licensed financial adviser.",
+  "weight_profile": "feature_rich"
+}
