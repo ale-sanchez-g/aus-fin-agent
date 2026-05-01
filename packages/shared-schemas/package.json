@@ -1,0 +1,10 @@
+{
+  "name": "@aus-fin-agent/shared-schemas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "echo 'No build needed for JS schemas'"
+  }
+}

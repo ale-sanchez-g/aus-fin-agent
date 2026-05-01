@@ -1,0 +1,15 @@
+{
+  "name": "@aus-fin-agent/openbanking-mcp-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node.js adapter service wrapping open-banking-mcp for CDR product discovery",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "express": "^4.21.1"
+  }
+}
