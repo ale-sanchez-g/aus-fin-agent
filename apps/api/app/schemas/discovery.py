@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 from typing import Optional, List, Any
 from datetime import datetime
 
@@ -24,6 +25,8 @@ class ClientProfileResponse(ClientProfileBase):
 
 
 class CreateDiscoveryRequest(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
     user_intent: str
     product_category: Optional[str] = None
     preferences: Optional[dict] = None

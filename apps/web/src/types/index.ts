@@ -98,7 +98,7 @@ export interface ClientPreferences {
 }
 
 export interface CreateDiscoveryRequest {
-  profileName: string;
+  userIntent: string;
   productCategory: ProductCategory;
   preferences: ClientPreferences;
   constraints: ClientPreferences;

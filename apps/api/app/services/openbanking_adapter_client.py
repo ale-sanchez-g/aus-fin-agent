@@ -72,7 +72,7 @@ class MCPAdapterClient:
 
         self._check_circuit()
         try:
-            async with MultiServerMCPClient(
+            client = MultiServerMCPClient(
                 {
                     "open_banking": {
                         "command": "npx",
@@ -81,10 +81,13 @@ class MCPAdapterClient:
                         "transport": "stdio",
                     }
                 }
-            ) as client:
-                result = await client.call_tool("open_banking", tool_name, args)
+            )
+            async with client.session("open_banking") as session:
+                call_result = await session.call_tool(tool_name, arguments=args)
                 self._record_success()
-                return result
+                if not call_result.content:
+                    return {}
+                return json.loads(call_result.content[0].text)
         except Exception as exc:
             self._record_failure()
             log.error("mcp_tool_call_failed", tool=tool_name, error=str(exc))

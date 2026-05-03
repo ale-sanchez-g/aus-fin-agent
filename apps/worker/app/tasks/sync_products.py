@@ -1,3 +1,4 @@
+import json
 import structlog
 from datetime import datetime, timezone
 from app.core.config import settings
@@ -11,7 +12,7 @@ async def fetch_products_via_mcp() -> list[dict]:
         return _load_mock_fixture().get("products", [])
     from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore
 
-    async with MultiServerMCPClient(
+    client = MultiServerMCPClient(
         {
             "open_banking": {
                 "command": "npx",
@@ -20,9 +21,13 @@ async def fetch_products_via_mcp() -> list[dict]:
                 "transport": "stdio",
             }
         }
-    ) as client:
-        result = await client.call_tool("open_banking", "list-products", {})
-        return result if isinstance(result, list) else result.get("data", [])
+    )
+    async with client.session("open_banking") as session:
+        call_result = await session.call_tool("list-products", arguments={})
+        if not call_result.content:
+            return []
+        raw = json.loads(call_result.content[0].text)
+        return raw if isinstance(raw, list) else raw.get("data", [])
 
 
 async def sync_all_products() -> dict:

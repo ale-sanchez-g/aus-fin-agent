@@ -38,7 +38,7 @@ export function DiscoveryWizard() {
   const navigate = useNavigate();
   const [step, setStep] = useState<Step>('category');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
-  const [profileName, setProfileName] = useState('');
+  const [userIntent, setUserIntent] = useState('');
   const [preferences, setPreferences] = useState<ClientPreferences>({});
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [weightProfile, setWeightProfile] = useState<WeightProfile>('balanced');
@@ -47,13 +47,13 @@ export function DiscoveryWizard() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!selectedCategory || !profileName) return;
+    if (!selectedCategory || !userIntent) return;
     setSubmitting(true);
     setStep('running');
     setError(null);
     try {
       const session = await createSession({
-        profileName,
+        userIntent,
         productCategory: selectedCategory,
         preferences: { ...preferences, requiredFeatures: selectedFeatures },
         constraints: {},
@@ -175,16 +175,16 @@ export function DiscoveryWizard() {
       {/* Step 2: Profile */}
       {step === 'profile' && (
         <div className="card">
-          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>Client Profile</h3>
+          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>What are you looking for?</h3>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', fontWeight: 500, marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-              Profile Name *
+              Describe your goal *
             </label>
             <input
               type="text"
-              value={profileName}
-              onChange={e => setProfileName(e.target.value)}
-              placeholder="e.g. First Home Buyer, Retiree, Business Owner"
+              value={userIntent}
+              onChange={e => setUserIntent(e.target.value)}
+              placeholder="e.g. I want a savings account with high interest and no monthly fees"
               style={{
                 width: '100%',
                 padding: '0.75rem',
@@ -198,9 +198,9 @@ export function DiscoveryWizard() {
             <button className="btn-secondary" onClick={() => setStep('category')}>← Back</button>
             <button
               className="btn-primary"
-              disabled={!profileName.trim()}
+              disabled={!userIntent.trim()}
               onClick={() => setStep('preferences')}
-              style={{ opacity: profileName.trim() ? 1 : 0.5 }}
+              style={{ opacity: userIntent.trim() ? 1 : 0.5 }}
             >
               Next →
             </button>
@@ -305,8 +305,8 @@ export function DiscoveryWizard() {
             <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.5rem 1rem' }}>
               <dt style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>Category:</dt>
               <dd style={{ fontSize: '0.875rem' }}>{selectedCategory ? PRODUCT_CATEGORY_LABELS[selectedCategory] : '-'}</dd>
-              <dt style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>Profile:</dt>
-              <dd style={{ fontSize: '0.875rem' }}>{profileName}</dd>
+              <dt style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>Intent:</dt>
+              <dd style={{ fontSize: '0.875rem' }}>{userIntent}</dd>
               <dt style={{ fontWeight: 500, fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>Weight:</dt>
               <dd style={{ fontSize: '0.875rem' }}>{WEIGHT_PROFILES.find(w => w.value === weightProfile)?.label}</dd>
               {selectedFeatures.length > 0 && (
