@@ -17,22 +17,6 @@ services:
       timeout: 5s
       retries: 5
 
-  node-adapter:
-    build:
-      context: packages/openbanking-mcp-adapter
-    restart: unless-stopped
-    environment:
-      USE_MOCK_DATA: ${USE_MOCK_DATA}
-      NODE_ENV: ${ENVIRONMENT}
-      PORT: 4000
-    ports:
-      - "4000:4000"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-
   backend:
     build:
       context: apps/api
@@ -40,13 +24,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      node-adapter:
-        condition: service_healthy
     env_file:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      NODE_ADAPTER_URL: http://node-adapter:4000
+      CDR_BASE_URL: ${CDR_BASE_URL:-https://api.cdr.gov.au}
+      CDR_MOCK_MODE: ${CDR_MOCK_MODE:-true}
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     ports:
       - "8000:8000"
@@ -63,15 +46,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      node-adapter:
-        condition: service_healthy
       backend:
         condition: service_healthy
     env_file:
       - .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      NODE_ADAPTER_URL: http://node-adapter:4000
+      CDR_BASE_URL: ${CDR_BASE_URL:-https://api.cdr.gov.au}
+      CDR_MOCK_MODE: ${CDR_MOCK_MODE:-true}
     ports:
       - "8001:8001"
 

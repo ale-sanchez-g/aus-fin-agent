@@ -1,22 +1,46 @@
-import httpx
+import json
 import structlog
 from datetime import datetime, timezone
-from tenacity import retry, stop_after_attempt, wait_exponential
+from app.core.config import settings
 
 log = structlog.get_logger()
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-async def fetch_providers_from_adapter(adapter_url: str) -> list[dict]:
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.get(f"{adapter_url}/api/providers")
-        response.raise_for_status()
-        return response.json().get("data", [])
+_MOCK_FIXTURE_PATH = "/app/mock-cdr-data.json"
 
-async def sync_all_providers(adapter_url: str) -> dict:
-    """Fetch providers from Node adapter and log result."""
-    log.info("sync_providers_start", adapter_url=adapter_url)
+
+def _load_mock_fixture() -> dict:
     try:
-        providers = await fetch_providers_from_adapter(adapter_url)
+        with open(_MOCK_FIXTURE_PATH) as fh:
+            return json.load(fh)
+    except Exception as exc:
+        log.warning("mock_fixture_load_failed", error=str(exc))
+        return {"providers": [], "products": []}
+
+
+async def fetch_providers_via_mcp() -> list[dict]:
+    if settings.CDR_MOCK_MODE:
+        return _load_mock_fixture().get("providers", [])
+    from langchain_mcp_adapters.client import MultiServerMCPClient  # type: ignore
+
+    async with MultiServerMCPClient(
+        {
+            "open_banking": {
+                "command": "npx",
+                "args": ["open-banking-mcp"],
+                "env": {"CDR_BASE_URL": settings.CDR_BASE_URL},
+                "transport": "stdio",
+            }
+        }
+    ) as client:
+        result = await client.call_tool("open_banking", "list-providers", {})
+        return result if isinstance(result, list) else result.get("data", [])
+
+
+async def sync_all_providers() -> dict:
+    """Fetch providers via MCP stdio and log result."""
+    log.info("sync_providers_start")
+    try:
+        providers = await fetch_providers_via_mcp()
         log.info("sync_providers_complete", count=len(providers))
         return {"synced": len(providers), "errors": [], "timestamp": datetime.now(timezone.utc).isoformat()}
     except Exception as e:

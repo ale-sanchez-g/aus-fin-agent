@@ -6,7 +6,7 @@ An Australian open banking product discovery platform that uses the Consumer Dat
 
 ## Overview
 
-`aus-fin-agent` is a production-ready monorepo that combines a LangGraph-powered AI agent, a CDR/open banking data adapter, a background sync worker, and a React web interface. Users describe what they are looking for in natural language and the agent retrieves, filters, scores, and explains the best-matching financial products, generating a compliant recommendation report.
+`aus-fin-agent` is a production-ready monorepo that combines a LangGraph-powered AI agent, the `open-banking-mcp` CDR server, a background sync worker, and a React web interface. Users describe what they are looking for in natural language and the agent retrieves, filters, scores, and explains the best-matching financial products, generating a compliant recommendation report.
 
 ---
 
@@ -31,18 +31,23 @@ An Australian open banking product discovery platform that uses the Consumer Dat
 │   │  SQLAlchemy │   │  AWS Bedrock    │   │  AWS S3        │  │
 │   │  PostgreSQL │   │  (Claude 3.5)   │   │  (Reports)     │  │
 │   └─────────────┘   └─────────────────┘   └────────────────┘  │
+│                                                                  │
+│   MCP Client (langchain-mcp-adapters, stdio transport)          │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ HTTP
+                             │ MCP stdio
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  OpenBanking MCP Adapter  (port 4000)                           │
-│  Express.js  –  Mock CDR data (dev) / Live CDR API (prod)       │
+│  open-banking-mcp  (sidecar process / ECS sidecar container)    │
+│  MCP server – Mock CDR data (CDR_MOCK_MODE=true) / Live CDR API │
 └─────────────────────────────────────────────────────────────────┘
-                             ▲
-                             │ Periodic sync
+                             │
+                             ▼
+                     CDR API / Open Banking Australia
+
+                             ▲ Periodic sync (MCP stdio)
 ┌────────────────────────────┴────────────────────────────────────┐
 │  Worker Service  (port 8001)                                    │
-│  Syncs products & providers from adapter into PostgreSQL        │
+│  Syncs products & providers into PostgreSQL via MCP             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -57,7 +62,6 @@ aus-fin-agent/
 │   ├── web/          # React + TypeScript frontend
 │   └── worker/       # Background sync service (Python)
 ├── packages/
-│   ├── openbanking-mcp-adapter/   # Node.js CDR adapter (Express)
 │   └── shared-schemas/            # Shared JS/TS schema definitions
 └── infra/
     └── terraform/    # AWS networking & ECS infrastructure
@@ -95,7 +99,7 @@ Intake → Retrieval → Eligibility → Scoring → Reasoning → Compliance �
 6. **Compliance** – Softens prescriptive language and appends required CDR disclaimers.
 7. **Report** – Assembles the final report, persists it to **AWS S3**, and saves metadata to PostgreSQL.
 
-**Tech stack:** Python 3.12, FastAPI 0.115, SQLAlchemy 2.0, Alembic, LangGraph ≥ 0.2.28, LangChain-Core ≥ 0.3.81, Pydantic 2.9, structlog, tenacity, AWS Bedrock / S3 / Cognito.
+**Tech stack:** Python 3.12, FastAPI 0.115, SQLAlchemy 2.0, Alembic, LangGraph ≥ 0.2.28, LangChain-Core ≥ 0.3.81, langchain-mcp-adapters ≥ 0.1.0, Pydantic 2.9, structlog, AWS Bedrock / S3 / Cognito.
 
 ---
 
@@ -104,30 +108,30 @@ Intake → Retrieval → Eligibility → Scoring → Reasoning → Compliance �
 Runs on a configurable interval (hours) and keeps the database up to date with the latest CDR product data.
 
 **Cycle:**
-1. Fetch products from the adapter (`GET /api/products`).
-2. Fetch providers/data holders (`GET /api/providers`).
+1. Call the `list-products` MCP tool on `open-banking-mcp` (stdio transport) to fetch all products.
+2. Call the `list-providers` MCP tool to fetch all registered data holders.
 3. Upsert records into PostgreSQL.
 4. Every 4 cycles, clean up stale records.
+
+When `CDR_MOCK_MODE=true` the worker reads from `apps/worker/mock-cdr-data.json` without spawning the MCP process — no live CDR connection required.
 
 Exposes a health-check HTTP endpoint on port 8001 and shuts down gracefully on `SIGTERM`/`SIGINT`.
 
 ---
 
-### OpenBanking MCP Adapter (`packages/openbanking-mcp-adapter`)
+### OpenBanking MCP (`open-banking-mcp`)
 
-Express.js service (port 4000) that abstracts the CDR API. In development/test it serves pre-populated mock data; in production it connects to the real open banking MCP library.
+`open-banking-mcp` is an npm package invoked directly over **stdio transport** by the FastAPI backend and the worker via `langchain-mcp-adapters`. There is no separate HTTP service or container — it is spawned as a subprocess on demand.
 
-**Routes:**
+**MCP tools exposed:**
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Health + mock-mode flag |
-| `GET` | `/api/providers` | All registered data holders |
-| `GET` | `/api/providers/:id/products` | Products for a provider (optional category filter) |
-| `GET` | `/api/products` | All products across all providers |
-| `GET` | `/api/products/:id` | Single product detail |
+| Tool | Description |
+|------|-------------|
+| `list-providers` | All registered CDR data holders |
+| `list-products` | All products across providers (optional `category` / `providerId` filters) |
+| `get-product-detail` | Single product detail by `productId` |
 
-Set `USE_MOCK_DATA=true` to use bundled mock data without a live CDR connection.
+Each service bundles its own **`mock-cdr-data.json`** fixture (3 providers, 5 products). When `CDR_MOCK_MODE=true` the fixture is read directly without spawning the MCP subprocess, so local development and CI require no live CDR connection.
 
 ---
 
@@ -153,7 +157,7 @@ The Discovery Wizard submits to the API and polls until the agent finishes (2-mi
 
 ### Shared Schemas (`packages/shared-schemas`)
 
-Single source of truth for data shapes (products, providers, discovery sessions, reports) shared between the Node adapter, frontend, and any other JS/TS consumers.
+Single source of truth for data shapes (products, providers, discovery sessions, reports) shared between the frontend and any other JS/TS consumers.
 
 ---
 
@@ -161,13 +165,15 @@ Single source of truth for data shapes (products, providers, discovery sessions,
 
 Deployed on **AWS ap-southeast-2** using Terraform:
 
-- **ECS Fargate** – Runs all four container services (api, web, worker, node-adapter).
+- **ECS Fargate** – Runs three services: `api` (with `open-banking-mcp` as a sidecar container in the same task), `web`, and `worker`.
 - **VPC** – Public/private subnets across 2 AZs, NAT Gateway.
 - **ALB** – Routes traffic to the web and API containers.
 - **RDS PostgreSQL** – Primary datastore.
 - **S3** – Stores generated recommendation reports (`aus-fin-agent-reports-<env>`).
 - **AWS Cognito** – User authentication and JWT issuance.
 - **AWS Bedrock** – LLM inference (Claude 3.5 Sonnet) for narrative generation.
+
+`open-banking-mcp` runs as a **sidecar container** (non-essential) in the same Fargate task as the API. The two containers share a process namespace so stdio transport works without any networking or port exposure.
 
 ---
 
@@ -190,7 +196,7 @@ Deployed on **AWS ap-southeast-2** using Terraform:
 
 ### Environment variables
 
-A `.env` file is included at the repo root with safe defaults for local development. The adapter uses bundled mock CDR data (`USE_MOCK_DATA=true`) so no live AWS credentials are required to start. If you want real Bedrock narrative generation or S3 report storage, fill in the AWS fields.
+A `.env` file is included at the repo root with safe defaults for local development. Both the API and worker default to `CDR_MOCK_MODE=true`, which reads from the bundled `mock-cdr-data.json` fixture — no live CDR connection or MCP subprocess required. Set `CDR_MOCK_MODE=false` and provide `CDR_BASE_URL` to connect to the real CDR API. If you want real Bedrock narrative generation or S3 report storage, fill in the AWS fields.
 
 ```bash
 # optional: review / override values before first run
@@ -203,13 +209,12 @@ vim .env
 docker-compose up -d --build
 ```
 
-This starts all five services (PostgreSQL, node-adapter, backend API, worker, web). 
+This starts four services (PostgreSQL, backend API, worker, web). `open-banking-mcp` is spawned in-process by the API and worker — no separate container is needed.
 
 | Service | URL |
 |---------|-----|
 | Web app | http://localhost:80 |
 | API | http://localhost:8000 |
-| OpenBanking adapter | http://localhost:4000 |
 | Worker health | http://localhost:8001 |
 | PostgreSQL | localhost:5432 |
 
@@ -219,21 +224,19 @@ This starts all five services (PostgreSQL, node-adapter, backend API, worker, we
 ```bash
 cd apps/api
 pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-**Adapter:**
-```bash
-cd packages/openbanking-mcp-adapter
-npm install
-USE_MOCK_DATA=true node src/server.js
+CDR_MOCK_MODE=true uvicorn app.main:app --reload --port 8000
 ```
 
 **Worker:**
 ```bash
 cd apps/worker
 pip install -r requirements.txt
-python -m app.main
+CDR_MOCK_MODE=true python -m app.main
+```
+
+To run against a live CDR endpoint instead of the mock fixture:
+```bash
+CDR_MOCK_MODE=false CDR_BASE_URL=https://api.cdr.gov.au uvicorn app.main:app --reload --port 8000
 ```
 
 **Web:**
@@ -252,9 +255,6 @@ cd apps/worker && pytest
 
 # Web (Vitest unit tests)
 cd apps/web && npm test
-
-# Adapter (Jest)
-cd packages/openbanking-mcp-adapter && npm test
 
 # E2E (Playwright)
 cd apps/web && npx playwright test

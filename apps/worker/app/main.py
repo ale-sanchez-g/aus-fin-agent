@@ -36,8 +36,8 @@ def start_health_server():
 
 async def run_sync_cycle():
     log.info("sync_cycle_start")
-    provider_result = await sync_all_providers(settings.NODE_ADAPTER_URL)
-    product_result = await sync_all_products(settings.NODE_ADAPTER_URL)
+    provider_result = await sync_all_providers()
+    product_result = await sync_all_products()
     log.info("sync_cycle_complete", providers=provider_result, products=product_result)
 
 

@@ -4,7 +4,8 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./test.db"
-    NODE_ADAPTER_URL: str = "http://node-adapter:4000"
+    CDR_BASE_URL: str = "https://api.cdr.gov.au"
+    CDR_MOCK_MODE: bool = True
     AWS_REGION: str = "ap-southeast-2"
     AWS_BEDROCK_MODEL_ID: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     COGNITO_USER_POOL_ID: str = ""

@@ -17,4 +17,4 @@ class HealthResponse(BaseModel):
     version: str
     environment: str
     database: str
-    node_adapter: str
+    mcp_mode: str

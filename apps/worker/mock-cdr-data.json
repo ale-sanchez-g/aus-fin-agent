@@ -1,0 +1,186 @@
+{
+  "providers": [
+    {
+      "id": "harbour-bank",
+      "name": "Harbour Bank",
+      "abn": "12 345 678 901",
+      "brandName": "Harbour Bank",
+      "industry": "banking",
+      "logoUri": "https://example.com/logos/harbour-bank.png",
+      "websiteUri": "https://harbourbank.example.com",
+      "cdrHolderId": "harbour-bank-001"
+    },
+    {
+      "id": "southern-cross-bank",
+      "name": "Southern Cross Bank",
+      "abn": "98 765 432 109",
+      "brandName": "Southern Cross Bank",
+      "industry": "banking",
+      "logoUri": "https://example.com/logos/scb.png",
+      "websiteUri": "https://southerncrossbank.example.com",
+      "cdrHolderId": "scb-001"
+    },
+    {
+      "id": "pacific-coast-bank",
+      "name": "Pacific Coast Bank",
+      "abn": "55 111 222 333",
+      "brandName": "Pacific Coast Bank",
+      "industry": "banking",
+      "logoUri": "https://example.com/logos/pcb.png",
+      "websiteUri": "https://pacificcoastbank.example.com",
+      "cdrHolderId": "pcb-001"
+    }
+  ],
+  "products": [
+    {
+      "productId": "hb-everyday-savings",
+      "effectiveFrom": "2024-01-01T00:00:00Z",
+      "effectiveTo": null,
+      "lastUpdated": "2025-01-15T00:00:00Z",
+      "productCategory": "TRANS_AND_SAVINGS_ACCOUNTS",
+      "name": "Harbour Everyday Saver",
+      "description": "High-interest savings account with no monthly fees",
+      "brand": "harbour-bank",
+      "brandName": "Harbour Bank",
+      "applicationUri": "https://harbourbank.example.com/apply/everyday-saver",
+      "isTailored": false,
+      "features": [
+        { "featureType": "DIGITAL_BANKING", "additionalInfo": "Full online and mobile banking" },
+        { "featureType": "NPP_PAYID", "additionalInfo": "PayID and PayTo supported" },
+        { "featureType": "FREE_TXNS", "additionalValue": "UNLIMITED", "additionalInfo": "Unlimited free transactions" }
+      ],
+      "constraints": [
+        { "constraintType": "MIN_BALANCE", "additionalValue": "1.00" }
+      ],
+      "eligibility": [
+        { "eligibilityType": "RESIDENCY", "additionalInfo": "Australian residents only" },
+        { "eligibilityType": "MIN_AGE", "additionalValue": "18" }
+      ],
+      "fees": [],
+      "depositRates": [
+        { "depositRateType": "BASE", "rate": "0.0475", "calculationFrequency": "P1D", "applicationFrequency": "P1M", "additionalInfo": "Base rate 4.75% p.a." },
+        { "depositRateType": "BONUS", "rate": "0.005", "calculationFrequency": "P1D", "applicationFrequency": "P1M", "additionalInfo": "Bonus 0.5% when you make 5+ purchases per month" }
+      ],
+      "lendingRates": []
+    },
+    {
+      "productId": "hb-everyday-transaction",
+      "effectiveFrom": "2024-01-01T00:00:00Z",
+      "effectiveTo": null,
+      "lastUpdated": "2025-01-15T00:00:00Z",
+      "productCategory": "TRANS_AND_SAVINGS_ACCOUNTS",
+      "name": "Harbour Everyday Account",
+      "description": "Fee-free everyday transaction account",
+      "brand": "harbour-bank",
+      "brandName": "Harbour Bank",
+      "applicationUri": "https://harbourbank.example.com/apply/everyday",
+      "isTailored": false,
+      "features": [
+        { "featureType": "DIGITAL_BANKING", "additionalInfo": "Mobile and internet banking" },
+        { "featureType": "VISA_DEBIT", "additionalInfo": "Visa Debit card included" },
+        { "featureType": "NPP_PAYID" }
+      ],
+      "constraints": [],
+      "eligibility": [
+        { "eligibilityType": "RESIDENCY", "additionalInfo": "Australian residents only" },
+        { "eligibilityType": "MIN_AGE", "additionalValue": "18" }
+      ],
+      "fees": [],
+      "depositRates": [
+        { "depositRateType": "BASE", "rate": "0.0001", "calculationFrequency": "P1D", "applicationFrequency": "P1M", "additionalInfo": "0.01% p.a. on account balance" }
+      ],
+      "lendingRates": []
+    },
+    {
+      "productId": "hb-home-loan-variable",
+      "effectiveFrom": "2024-03-01T00:00:00Z",
+      "effectiveTo": null,
+      "lastUpdated": "2025-02-01T00:00:00Z",
+      "productCategory": "RESIDENTIAL_MORTGAGES",
+      "name": "Harbour Variable Home Loan",
+      "description": "Competitive variable rate home loan with offset account",
+      "brand": "harbour-bank",
+      "brandName": "Harbour Bank",
+      "applicationUri": "https://harbourbank.example.com/apply/home-loan",
+      "isTailored": false,
+      "features": [
+        { "featureType": "OFFSET", "additionalInfo": "100% offset account available" },
+        { "featureType": "REDRAW", "additionalInfo": "Free unlimited redraws" },
+        { "featureType": "DIGITAL_BANKING" }
+      ],
+      "constraints": [
+        { "constraintType": "MIN_LIMIT", "additionalValue": "100000" },
+        { "constraintType": "MAX_LIMIT", "additionalValue": "5000000" }
+      ],
+      "eligibility": [
+        { "eligibilityType": "RESIDENCY", "additionalInfo": "Australian residents only" },
+        { "eligibilityType": "MIN_AGE", "additionalValue": "18" },
+        { "eligibilityType": "EMPLOYMENT_STATUS", "additionalInfo": "Regular income required" }
+      ],
+      "fees": [
+        { "name": "Annual Fee", "feeType": "PERIODIC", "amount": "395.00", "additionalInfo": "Charged annually" },
+        { "name": "Application Fee", "feeType": "UPFRONT", "amount": "600.00", "additionalInfo": "One-off application fee" }
+      ],
+      "depositRates": [],
+      "lendingRates": [
+        { "lendingRateType": "VARIABLE", "rate": "0.0624", "comparisonRate": "0.0641", "calculationFrequency": "P1D", "applicationFrequency": "P1M", "additionalInfo": "Variable rate 6.24% p.a. Comparison rate 6.41% p.a." }
+      ]
+    },
+    {
+      "productId": "scb-bonus-saver",
+      "effectiveFrom": "2024-01-01T00:00:00Z",
+      "effectiveTo": null,
+      "lastUpdated": "2025-01-10T00:00:00Z",
+      "productCategory": "TRANS_AND_SAVINGS_ACCOUNTS",
+      "name": "SCB Bonus Saver",
+      "description": "Earn bonus interest with monthly deposit conditions",
+      "brand": "southern-cross-bank",
+      "brandName": "Southern Cross Bank",
+      "applicationUri": "https://southerncrossbank.example.com/apply/bonus-saver",
+      "isTailored": false,
+      "features": [
+        { "featureType": "DIGITAL_BANKING" },
+        { "featureType": "NPP_PAYID" }
+      ],
+      "constraints": [],
+      "eligibility": [
+        { "eligibilityType": "RESIDENCY", "additionalInfo": "Australian residents only" },
+        { "eligibilityType": "MIN_AGE", "additionalValue": "18" }
+      ],
+      "fees": [],
+      "depositRates": [
+        { "depositRateType": "BASE", "rate": "0.0100", "calculationFrequency": "P1D", "applicationFrequency": "P1M", "additionalInfo": "Base rate 1.00% p.a." },
+        { "depositRateType": "BONUS", "rate": "0.0390", "calculationFrequency": "P1D", "applicationFrequency": "P1M", "additionalInfo": "Bonus 3.90% p.a. when $200+ deposited each month" }
+      ],
+      "lendingRates": []
+    },
+    {
+      "productId": "pcb-term-deposit-12m",
+      "effectiveFrom": "2024-01-01T00:00:00Z",
+      "effectiveTo": null,
+      "lastUpdated": "2025-01-20T00:00:00Z",
+      "productCategory": "TERM_DEPOSITS",
+      "name": "PCB 12-Month Term Deposit",
+      "description": "Locked-in rate for 12 months with no fees",
+      "brand": "pacific-coast-bank",
+      "brandName": "Pacific Coast Bank",
+      "applicationUri": "https://pacificcoastbank.example.com/apply/term-deposit",
+      "isTailored": false,
+      "features": [
+        { "featureType": "DIGITAL_BANKING" }
+      ],
+      "constraints": [
+        { "constraintType": "MIN_BALANCE", "additionalValue": "1000.00" }
+      ],
+      "eligibility": [
+        { "eligibilityType": "RESIDENCY", "additionalInfo": "Australian residents only" },
+        { "eligibilityType": "MIN_AGE", "additionalValue": "18" }
+      ],
+      "fees": [],
+      "depositRates": [
+        { "depositRateType": "FIXED", "rate": "0.0510", "calculationFrequency": "P1D", "applicationFrequency": "P12M", "tiers": [{ "name": "Standard", "unitOfMeasure": "MONTH", "minimumValue": 12, "maximumValue": 12 }], "additionalInfo": "Fixed 5.10% p.a. for 12 months" }
+      ],
+      "lendingRates": []
+    }
+  ]
+}
