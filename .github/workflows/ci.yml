@@ -78,27 +78,6 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-  adapter-test:
-    name: Node Adapter Tests
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/openbanking-mcp-adapter
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: packages/openbanking-mcp-adapter/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Run tests
-        env:
-          USE_MOCK_DATA: "true"
-        run: npm test
-
   e2e-test:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest

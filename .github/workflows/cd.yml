@@ -21,8 +21,6 @@ jobs:
             context: apps/web
           - service: worker
             context: apps/worker
-          - service: node-adapter
-            context: packages/openbanking-mcp-adapter
     steps:
       - uses: actions/checkout@v4
       - name: Configure AWS Credentials
@@ -59,7 +57,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Update ECS services
         run: |
-          for SERVICE in api web worker node-adapter; do
+          for SERVICE in api web worker; do
             aws ecs update-service \
               --cluster aus-fin-agent-dev \
               --service aus-fin-agent-dev-$SERVICE \
