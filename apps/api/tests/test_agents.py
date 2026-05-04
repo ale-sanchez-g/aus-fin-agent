@@ -136,6 +136,7 @@ def test_scoring_node_scores_and_sorts():
     # First product (high rate, no fee) should score higher
     assert scored[0]["total_score"] >= scored[1]["total_score"]
     assert scored[0]["id"] == "a"
+    assert result["ranking_metadata"]["tie_diversification_applied"] is False
 
 
 def test_scoring_node_diversifies_tied_providers():
@@ -192,6 +193,53 @@ def test_scoring_node_diversifies_tied_providers():
     result = scoring_node(state)
     providers = [p.get("provider_id") for p in result["scored_products"][:4]]
     assert providers == ["anz", "westpac", "anz", "westpac"]
+    assert result["ranking_metadata"]["tie_diversification_applied"] is True
+
+
+def test_report_node_includes_tie_diversification_metadata(monkeypatch):
+    from app.agents.nodes.report_node import report_node
+    from app.agents.nodes import report_node as report_node_module
+
+    captured = {}
+
+    class _DummyReport:
+        def model_dump(self, mode="json"):
+            return {
+                "session_id": "test-report-meta",
+                "metadata": {"ranking": {"tie_diversification_applied": True}},
+            }
+
+    def _fake_generate_report(**kwargs):
+        captured.update(kwargs)
+        return _DummyReport()
+
+    def _fake_persist_report(report):
+        return None, None
+
+    monkeypatch.setattr(report_node_module.report_service, "generate_report", _fake_generate_report)
+    monkeypatch.setattr(report_node_module.report_service, "persist_report", _fake_persist_report)
+
+    state = AgentState(
+        session_id="test-report-meta",
+        user_intent="first credit card",
+        product_category="CRED_AND_CHRG_CARDS",
+        preferences={},
+        constraints={},
+        weight_profile="rate_focused",
+        products=[],
+        eligible_products=[],
+        scored_products=[],
+        ranking_metadata={"tie_diversification_applied": True},
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = report_node(state)
+    assert captured["ranking_metadata"]["tie_diversification_applied"] is True
+    assert result["report"]["metadata"]["ranking"]["tie_diversification_applied"] is True
 
 
 def test_intake_node_infers_category():

@@ -12,20 +12,21 @@ def _provider_key(product: dict) -> str:
     return str(provider or "unknown").strip().lower()
 
 
-def _diversify_tied_scores(scored: list[dict]) -> list[dict]:
+def _diversify_tied_scores(scored: list[dict]) -> tuple[list[dict], bool]:
     """Interleave providers within identical score buckets.
 
     This avoids one provider dominating top recommendations when many products
     are tied on score due to sparse upstream attributes.
     """
     if not scored:
-        return scored
+        return scored, False
 
     score_groups: dict[float, list[dict]] = defaultdict(list)
     for product in scored:
         score_groups[float(product.get("total_score", 0.0))].append(product)
 
     diversified: list[dict] = []
+    tie_diversification_applied = False
     for score in sorted(score_groups.keys(), reverse=True):
         bucket = score_groups[score]
         by_provider: dict[str, deque[dict]] = defaultdict(deque)
@@ -37,6 +38,9 @@ def _diversify_tied_scores(scored: list[dict]) -> list[dict]:
                 provider_order.append(key)
             by_provider[key].append(product)
 
+        if len(bucket) > 1 and len(by_provider) > 1:
+            tie_diversification_applied = True
+
         added = True
         while added:
             added = False
@@ -46,7 +50,7 @@ def _diversify_tied_scores(scored: list[dict]) -> list[dict]:
                     diversified.append(queue.popleft())
                     added = True
 
-    return diversified
+    return diversified, tie_diversification_applied
 
 
 def scoring_node(state: AgentState) -> dict:
@@ -76,7 +80,7 @@ def scoring_node(state: AgentState) -> dict:
             scored.append(scored_product)
 
         scored.sort(key=lambda p: p["total_score"], reverse=True)
-        scored = _diversify_tied_scores(scored)
+        scored, tie_diversification_applied = _diversify_tied_scores(scored)
 
         log.info(
             "scoring_complete",
@@ -84,7 +88,15 @@ def scoring_node(state: AgentState) -> dict:
             top_score=scored[0]["total_score"] if scored else 0,
             session_id=state.get("session_id"),
         )
-        return {**state, "scored_products": scored, "status": "scoring_complete"}
+        ranking_metadata = {
+            "tie_diversification_applied": tie_diversification_applied,
+        }
+        return {
+            **state,
+            "scored_products": scored,
+            "ranking_metadata": ranking_metadata,
+            "status": "scoring_complete",
+        }
 
     except Exception as exc:
         log.error("scoring_node_error", error=str(exc))

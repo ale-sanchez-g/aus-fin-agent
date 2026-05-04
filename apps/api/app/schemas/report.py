@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List, Any
 from datetime import datetime
 
@@ -22,6 +22,7 @@ class DiscoveryReport(BaseModel):
     compliance_notes: List[str] = []
     disclaimer: str = ""
     weight_profile: Optional[str] = None
+    metadata: dict = Field(default_factory=dict)
 
 
 class ReportArtifactBase(BaseModel):

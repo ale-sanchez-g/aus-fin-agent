@@ -1,4 +1,4 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, NotRequired
 
 
 class AgentState(TypedDict):
@@ -11,6 +11,7 @@ class AgentState(TypedDict):
     products: list[dict]
     eligible_products: list[dict]
     scored_products: list[dict]
+    ranking_metadata: NotRequired[dict]
     narrative: str
     compliance_notes: list[str]
     report: dict

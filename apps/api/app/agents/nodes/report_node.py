@@ -18,6 +18,7 @@ def report_node(state: AgentState) -> dict:
             scored_products=state.get("scored_products") or [],
             narrative=state.get("narrative", ""),
             compliance_notes=state.get("compliance_notes") or [],
+            ranking_metadata=state.get("ranking_metadata") or {},
         )
 
         # Persist report

@@ -23,6 +23,7 @@ class ReportGenerationService:
         scored_products: list[dict],
         narrative: str,
         compliance_notes: list[str],
+        ranking_metadata: Optional[dict] = None,
     ) -> DiscoveryReport:
         top_n = scored_products[:10]
         top_recommendations = []
@@ -98,6 +99,14 @@ class ReportGenerationService:
             ),
         ]
 
+        report_metadata = {
+            "ranking": {
+                "tie_diversification_applied": bool(
+                    (ranking_metadata or {}).get("tie_diversification_applied", False)
+                )
+            }
+        }
+
         return DiscoveryReport(
             session_id=session_id,
             generated_at=datetime.now(timezone.utc),
@@ -111,6 +120,7 @@ class ReportGenerationService:
             compliance_notes=compliance_notes,
             disclaimer=settings.DISCLAIMER_TEXT,
             weight_profile=weight_profile,
+            metadata=report_metadata,
         )
 
     def persist_report(self, report: DiscoveryReport) -> tuple[Optional[str], Optional[str]]:
