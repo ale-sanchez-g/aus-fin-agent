@@ -1,0 +1,25 @@
+environment                = "dev"
+project                    = "aus-fin-agent"
+aws_region                 = "ap-southeast-2"
+vpc_cidr                   = "10.10.0.0/16"
+api_desired_count          = 1
+web_desired_count          = 1
+worker_desired_count       = 1
+api_task_cpu               = 512
+api_task_memory            = 1024
+web_task_cpu               = 256
+web_task_memory            = 512
+worker_task_cpu            = 256
+worker_task_memory         = 512
+db_instance_class          = "db.t4g.micro"
+db_engine_version          = "16.13"
+db_allocated_storage       = 20
+sync_interval_hours        = 6
+cdr_mock_mode              = true
+cdr_base_url               = "https://api.cdr.gov.au"
+bedrock_model_id           = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+enable_deletion_protection = false
+tags = {
+  Owner = "platform"
+  Tier  = "development"
+}

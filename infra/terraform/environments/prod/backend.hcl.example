@@ -1,0 +1,5 @@
+bucket         = "aus-fin-agent-terraform-state-prod"
+key            = "infra/terraform/prod.tfstate"
+region         = "ap-southeast-2"
+dynamodb_table = "aus-fin-agent-terraform-locks"
+encrypt        = true
