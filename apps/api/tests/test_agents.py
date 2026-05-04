@@ -57,6 +57,47 @@ def test_eligibility_node_filters_correctly():
     assert result["eligible_products"][0]["id"] == "1"
 
 
+def test_eligibility_node_excludes_vehicle_loans_for_non_vehicle_intent():
+    from app.agents.nodes.eligibility_node import eligibility_node
+
+    state = AgentState(
+        session_id="test-intent-filter",
+        user_intent="I need funding to start a children's soccer business",
+        product_category="PERS_LOANS",
+        preferences={},
+        constraints={},
+        weight_profile="balanced",
+        products=[
+            {
+                "id": "car-loan",
+                "name": "Secured Fixed Rate Car Loan",
+                "description": "Vehicle finance for new or used cars",
+                "fees": [],
+                "rates": [],
+                "eligibility": [],
+            },
+            {
+                "id": "personal-loan",
+                "name": "Unsecured Fixed Rate Personal Loan",
+                "description": "General-purpose funding for personal expenses",
+                "fees": [],
+                "rates": [],
+                "eligibility": [],
+            },
+        ],
+        eligible_products=[],
+        scored_products=[],
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = eligibility_node(state)
+    assert [product["id"] for product in result["eligible_products"]] == ["personal-loan"]
+
+
 def test_scoring_node_scores_and_sorts():
     state = AgentState(
         session_id="test-789",

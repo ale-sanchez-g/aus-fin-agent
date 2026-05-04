@@ -100,7 +100,7 @@ export function ReportViewer() {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontWeight: 700, color: 'var(--color-primary)', fontSize: '1.1rem' }}>
-                        {(result.score * 100).toFixed(0)}
+                        {`${result.score.toFixed(2)}%`}
                       </p>
                       <p style={{ fontSize: '0.75rem', color: 'var(--color-gray-400)' }}>score</p>
                     </div>

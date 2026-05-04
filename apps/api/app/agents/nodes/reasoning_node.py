@@ -32,7 +32,9 @@ def _bedrock_narrative(
         f"{json.dumps(products_summary, indent=2)}\n\n"
         "Write a concise, objective 2-3 paragraph narrative explaining the top recommendations. "
         "Do NOT give personal financial advice. Use discovery/informational language only. "
-        "Mention key differentiators like fees, rates, and features."
+        "Mention key differentiators like fees, rates, and features. "
+        "Do not infer a use case that the user did not state, and do not justify products whose purpose "
+        "does not directly align with the user's request."
     )
 
     bedrock = boto3.client("bedrock-runtime", region_name=settings.AWS_REGION)
@@ -66,9 +68,10 @@ def _template_narrative(
     third = scored_products[2] if len(scored_products) > 2 else None
 
     category_display = product_category.replace("_", " ").title()
+    intent_display = user_intent or category_display
 
     narrative = (
-        f"Based on your interest in {category_display}, our discovery engine evaluated "
+        f"Based on your request for {intent_display}, our discovery engine evaluated "
         f"{len(scored_products)} eligible products using the '{weight_profile}' scoring profile.\n\n"
         f"The highest-scoring product is **{top.get('name', 'Unknown')}** "
         f"(score: {top.get('total_score', 0):.1f}/100). "

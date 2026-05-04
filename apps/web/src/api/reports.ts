@@ -17,6 +17,10 @@ type BackendDiscoveryReport = {
     product_id?: string;
     external_product_id?: string;
     name?: string;
+    provider_id?: string;
+    brand?: string;
+    brand_name?: string;
+    provider_name?: string;
     category?: string;
     total_score?: number;
     score_breakdown?: Record<string, number | string>;
@@ -34,10 +38,14 @@ function mapBackendReport(input: BackendDiscoveryReport): DiscoveryReport {
   const shortlist = (input.top_recommendations ?? []).map((item, index) => {
     const scoreBreakdown = item.score_breakdown ?? {};
     const rateRows = item.rates ?? [];
+    const rawScore = Number(item.total_score ?? 0);
+    const normalizedScore = rawScore <= 1 ? rawScore * 100 : rawScore;
+    const providerName = item.brand_name ?? item.provider_name ?? item.brand ?? item.provider_id ?? 'Unknown provider';
+
     return {
       id: item.product_id ?? item.external_product_id ?? `product-${index + 1}`,
       rank: item.rank ?? index + 1,
-      score: Number(item.total_score ?? 0),
+      score: Number.isFinite(normalizedScore) ? normalizedScore : 0,
       scoreBreakdown: {
         monthlyFees: Number(scoreBreakdown.monthly_fees ?? 0),
         rateCompetitiveness: Number(scoreBreakdown.rate_competitiveness ?? 0),
@@ -54,8 +62,8 @@ function mapBackendReport(input: BackendDiscoveryReport): DiscoveryReport {
         productId: item.external_product_id ?? item.product_id ?? `product-${index + 1}`,
         productCategory: (item.category ?? input.product_category ?? 'TRANS_AND_SAVINGS_ACCOUNTS') as DiscoveryReport['rankedShortlist'][number]['product']['productCategory'],
         name: item.name ?? 'Unknown product',
-        brand: 'Unknown',
-        brandName: 'Unknown provider',
+        brand: item.brand ?? providerName,
+        brandName: providerName,
         applicationUri: item.application_uri,
         isTailored: false,
         features: (item.features ?? []).map((feature) => ({
@@ -79,6 +87,7 @@ function mapBackendReport(input: BackendDiscoveryReport): DiscoveryReport {
         })),
         lendingRates: [],
         eligibility: [],
+        providerId: item.provider_id,
       },
     };
   });

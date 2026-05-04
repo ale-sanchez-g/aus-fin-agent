@@ -3,6 +3,36 @@ from app.agents.state import AgentState
 
 log = structlog.get_logger()
 
+VEHICLE_KEYWORDS = {"car", "auto", "vehicle", "motor", "ute", "truck"}
+
+
+def _contains_keyword(text: str, keywords: set[str]) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in keywords)
+
+
+def _matches_intent(product: dict, user_intent: str) -> bool:
+    if not user_intent:
+        return True
+
+    searchable = " ".join(
+        str(value)
+        for value in [
+            product.get("name"),
+            product.get("description"),
+            product.get("category"),
+        ]
+        if value
+    )
+
+    product_is_vehicle_specific = _contains_keyword(searchable, VEHICLE_KEYWORDS)
+    intent_mentions_vehicle = _contains_keyword(user_intent, VEHICLE_KEYWORDS)
+
+    if product_is_vehicle_specific and not intent_mentions_vehicle:
+        return False
+
+    return True
+
 
 def _get_periodic_fee(product: dict) -> float:
     fees: list[dict] = product.get("fees", []) or []
@@ -37,6 +67,7 @@ def eligibility_node(state: AgentState) -> dict:
     try:
         products: list[dict] = state.get("products") or []
         constraints: dict = state.get("constraints") or {}
+        user_intent = state.get("user_intent", "")
 
         max_monthly_fee = constraints.get("max_monthly_fee")
         min_rate = constraints.get("min_rate")
@@ -46,6 +77,9 @@ def eligibility_node(state: AgentState) -> dict:
 
         eligible = []
         for product in products:
+            if not _matches_intent(product, user_intent):
+                continue
+
             # Fee constraint
             if max_monthly_fee is not None:
                 fee = _get_periodic_fee(product)
