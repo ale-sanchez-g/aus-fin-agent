@@ -138,6 +138,62 @@ def test_scoring_node_scores_and_sorts():
     assert scored[0]["id"] == "a"
 
 
+def test_scoring_node_diversifies_tied_providers():
+    state = AgentState(
+        session_id="test-790",
+        user_intent="first credit card",
+        product_category="CRED_AND_CHRG_CARDS",
+        preferences={},
+        constraints={},
+        weight_profile="rate_focused",
+        products=[],
+        eligible_products=[
+            {
+                "id": "anz-1",
+                "provider_id": "anz",
+                "name": "ANZ Card 1",
+                "fees": [{"fee_type": "PERIODIC", "amount": "0"}],
+                "rates": [],
+                "features": [],
+            },
+            {
+                "id": "anz-2",
+                "provider_id": "anz",
+                "name": "ANZ Card 2",
+                "fees": [{"fee_type": "PERIODIC", "amount": "0"}],
+                "rates": [],
+                "features": [],
+            },
+            {
+                "id": "westpac-1",
+                "provider_id": "westpac",
+                "name": "Westpac Card 1",
+                "fees": [{"fee_type": "PERIODIC", "amount": "0"}],
+                "rates": [],
+                "features": [],
+            },
+            {
+                "id": "westpac-2",
+                "provider_id": "westpac",
+                "name": "Westpac Card 2",
+                "fees": [{"fee_type": "PERIODIC", "amount": "0"}],
+                "rates": [],
+                "features": [],
+            },
+        ],
+        scored_products=[],
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = scoring_node(state)
+    providers = [p.get("provider_id") for p in result["scored_products"][:4]]
+    assert providers == ["anz", "westpac", "anz", "westpac"]
+
+
 def test_intake_node_infers_category():
     from app.agents.nodes.intake_node import intake_node
 

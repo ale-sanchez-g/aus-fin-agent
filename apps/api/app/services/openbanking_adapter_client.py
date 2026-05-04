@@ -24,6 +24,9 @@ _DISCOVERY_BANK_IDS = [
     "macquarie-bank",
 ]
 
+_MCP_PAGE_SIZE = 100
+_MCP_MAX_PAGES_PER_BANK = 50
+
 # Path to the mock fixture bundled with this service
 _MOCK_FIXTURE_PATH = "/app/mock-cdr-data.json"
 
@@ -155,38 +158,101 @@ class MCPAdapterClient:
         return slug or "unknown"
 
     async def _fetch_credit_cards(self, category: str | None) -> list[dict]:
-        query = "travel" if category == "TRAVEL_CARDS" else "all"
-        result = await self._call_mcp_tool("find_credit_cards", {"query": query, "limit": 25})
-        if not isinstance(result, str):
-            return []
+        queries = ["travel"] if category == "TRAVEL_CARDS" else ["all", "travel", "cashback", "zero-fee"]
 
         products: list[dict] = []
-        for row in self._parse_markdown_table(result):
-            product_cell = row.get("Product", "")
-            product_name, product_url = self._extract_markdown_link(product_cell)
-            bank = row.get("Bank", "")
-            annual_fee = self._parse_fee_amount(row.get("Annual Fee", ""))
-            key_feature = row.get("Key Feature", "")
+        seen: set[str] = set()
 
-            feature_type = "TRAVEL_INSURANCE" if "travel" in key_feature.lower() else "BONUS_REWARDS"
+        for query in queries:
+            result = await self._call_mcp_tool("find_credit_cards", {"query": query, "limit": 50})
+            if not isinstance(result, str):
+                continue
 
-            products.append(
+            for row in self._parse_markdown_table(result):
+                product_cell = row.get("Product", "")
+                product_name, product_url = self._extract_markdown_link(product_cell)
+                bank = row.get("Bank", "")
+                annual_fee = self._parse_fee_amount(row.get("Annual Fee", ""))
+                key_feature = row.get("Key Feature", "")
+
+                dedupe_key = f"{self._slug(bank)}:{self._slug(product_name)}"
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+
+                feature_type = "TRAVEL_INSURANCE" if "travel" in key_feature.lower() else "BONUS_REWARDS"
+
+                products.append(
+                    {
+                        "productId": dedupe_key,
+                        "providerId": self._slug(bank),
+                        "name": product_name,
+                        "productName": product_name,
+                        "productCategory": "CRED_AND_CHRG_CARDS",
+                        "brandName": bank,
+                        "applicationUri": product_url,
+                        "isTailored": False,
+                        "fees": [{"feeType": "PERIODIC", "name": "Annual fee", "amount": annual_fee}],
+                        "features": [{"featureType": feature_type, "additionalValue": key_feature}],
+                        "depositRates": [],
+                        "lendingRates": [],
+                        "eligibility": [],
+                    }
+                )
+
+        return products
+
+    async def _fetch_all_products_for_bank(self, bank_id: str, category: str) -> list[dict]:
+        products: list[dict] = []
+        seen_page_signatures: set[tuple[str, ...]] = set()
+
+        for page in range(1, _MCP_MAX_PAGES_PER_BANK + 1):
+            result = await self._call_mcp_tool(
+                "list_banking_products",
                 {
-                    "productId": f"{self._slug(bank)}:{self._slug(product_name)}",
-                    "providerId": self._slug(bank),
-                    "name": product_name,
-                    "productName": product_name,
-                    "productCategory": "CRED_AND_CHRG_CARDS",
-                    "brandName": bank,
-                    "applicationUri": product_url,
-                    "isTailored": False,
-                    "fees": [{"feeType": "PERIODIC", "name": "Annual fee", "amount": annual_fee}],
-                    "features": [{"featureType": feature_type, "additionalValue": key_feature}],
-                    "depositRates": [],
-                    "lendingRates": [],
-                    "eligibility": [],
-                }
+                    "bankId": bank_id,
+                    "category": category,
+                    "page": page,
+                    "pageSize": _MCP_PAGE_SIZE,
+                },
             )
+            if not isinstance(result, str):
+                break
+
+            rows = self._parse_markdown_table(result)
+            if not rows:
+                break
+
+            signature = tuple(
+                self._slug(self._extract_markdown_link(row.get("Product", ""))[0]) for row in rows
+            )
+            if signature in seen_page_signatures:
+                break
+            seen_page_signatures.add(signature)
+
+            for row in rows:
+                product_cell = row.get("Product", "")
+                product_name, product_url = self._extract_markdown_link(product_cell)
+                products.append(
+                    {
+                        "productId": f"{bank_id}:{self._slug(product_name)}",
+                        "providerId": bank_id,
+                        "name": product_name,
+                        "productName": product_name,
+                        "productCategory": row.get("Category", category) or category,
+                        "brandName": bank_id,
+                        "applicationUri": product_url,
+                        "isTailored": False,
+                        "fees": [],
+                        "features": [],
+                        "depositRates": [],
+                        "lendingRates": [],
+                        "eligibility": [],
+                    }
+                )
+
+            if len(rows) < _MCP_PAGE_SIZE:
+                break
 
         return products
 
@@ -197,33 +263,7 @@ class MCPAdapterClient:
         products: list[dict] = []
         for bank_id in _DISCOVERY_BANK_IDS:
             try:
-                result = await self._call_mcp_tool(
-                    "list_banking_products",
-                    {"bankId": bank_id, "category": category, "pageSize": 25},
-                )
-                if not isinstance(result, str):
-                    continue
-
-                for row in self._parse_markdown_table(result):
-                    product_cell = row.get("Product", "")
-                    product_name, product_url = self._extract_markdown_link(product_cell)
-                    products.append(
-                        {
-                            "productId": f"{bank_id}:{self._slug(product_name)}",
-                            "providerId": bank_id,
-                            "name": product_name,
-                            "productName": product_name,
-                            "productCategory": row.get("Category", category) or category,
-                            "brandName": bank_id,
-                            "applicationUri": product_url,
-                            "isTailored": False,
-                            "fees": [],
-                            "features": [],
-                            "depositRates": [],
-                            "lendingRates": [],
-                            "eligibility": [],
-                        }
-                    )
+                products.extend(await self._fetch_all_products_for_bank(bank_id=bank_id, category=category))
             except Exception as exc:
                 log.warning("mcp_list_banking_products_failed", bank_id=bank_id, category=category, error=str(exc))
 
