@@ -9,6 +9,7 @@ describe('Navigation', () => {
     expect(screen.getByText(/Dashboard/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Discover/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Products/i)).toBeInTheDocument();
+    expect(screen.getByText(/Reports/i)).toBeInTheDocument();
     expect(screen.getByText(/Sync Status/i)).toBeInTheDocument();
   });
 

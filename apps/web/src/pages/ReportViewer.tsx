@@ -3,7 +3,6 @@ import { useParams, Link } from 'react-router-dom';
 import { getReport } from '../api/reports';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import type { DiscoveryReport, RecommendationResult } from '../types';
-import { PRODUCT_CATEGORY_LABELS } from '../types';
 
 export function ReportViewer() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -25,7 +24,7 @@ export function ReportViewer() {
     return (
       <div data-testid="report-viewer">
         <div style={{ marginBottom: '1.5rem' }}>
-          <Link to="/" style={{ fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>← Back to Dashboard</Link>
+          <Link to="/reports" style={{ fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>← Back to Reports</Link>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '0.5rem' }}>Discovery Report</h2>
         </div>
         <div className="card" style={{ background: '#fee2e2', border: '1px solid #fca5a5' }}>
@@ -43,7 +42,7 @@ export function ReportViewer() {
   return (
     <div data-testid="report-viewer">
       <div style={{ marginBottom: '1.5rem' }}>
-        <Link to="/" style={{ fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>← Back to Dashboard</Link>
+        <Link to="/reports" style={{ fontSize: '0.875rem', color: 'var(--color-gray-600)' }}>← Back to Reports</Link>
         <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: '0.5rem' }}>Discovery Report</h2>
         <p style={{ color: 'var(--color-gray-600)', fontSize: '0.875rem' }}>
           Generated: {new Date(report.generatedAt).toLocaleString('en-AU')}

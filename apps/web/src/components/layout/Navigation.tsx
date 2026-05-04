@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { path: '/', label: '📊 Dashboard', exact: true },
   { path: '/discover', label: '🔍 Discover' },
   { path: '/products', label: '📋 Products' },
+  { path: '/reports', label: '📄 Reports' },
   { path: '/sync-status', label: '🔄 Sync Status' },
 ];
 

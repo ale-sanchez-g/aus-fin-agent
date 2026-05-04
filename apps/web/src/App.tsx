@@ -4,6 +4,7 @@ import { AppShell } from './components/layout/AppShell';
 import { Dashboard } from './pages/Dashboard';
 import { DiscoveryWizard } from './pages/DiscoveryWizard';
 import { ProductComparison } from './pages/ProductComparison';
+import { ReportsList } from './pages/ReportsList';
 import { ReportViewer } from './pages/ReportViewer';
 import { SyncStatus } from './pages/SyncStatus';
 import { NotFound } from './pages/NotFound';
@@ -16,6 +17,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="discover" element={<DiscoveryWizard />} />
           <Route path="products" element={<ProductComparison />} />
+          <Route path="reports" element={<ReportsList />} />
           <Route path="reports/:sessionId" element={<ReportViewer />} />
           <Route path="sync-status" element={<SyncStatus />} />
           <Route path="404" element={<NotFound />} />
