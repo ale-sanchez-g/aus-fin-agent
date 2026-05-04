@@ -77,3 +77,10 @@ def test_create_session_with_constraints(client):
     assert response.status_code == 201
     data = response.json()
     assert data["constraints"]["min_rate"] == 0.04
+
+
+def test_is_uuid_helper_accepts_only_uuid_values():
+    from app.api.routes.discovery import _is_uuid
+
+    assert _is_uuid("123e4567-e89b-12d3-a456-426614174000")
+    assert not _is_uuid("anz:anz-platinum")

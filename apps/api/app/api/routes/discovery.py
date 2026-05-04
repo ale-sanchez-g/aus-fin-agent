@@ -1,4 +1,5 @@
 import asyncio
+import re
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
@@ -15,6 +16,14 @@ import structlog
 
 log = structlog.get_logger()
 router = APIRouter()
+
+_UUID_RE = re.compile(
+    r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+)
+
+
+def _is_uuid(value: str | None) -> bool:
+    return bool(value and _UUID_RE.fullmatch(value))
 
 
 def _run_discovery_workflow(session_id: str, state: dict):
@@ -40,10 +49,12 @@ def _run_discovery_workflow(session_id: str, state: dict):
             if result.get("scored_products"):
                 for rank, scored in enumerate(result["scored_products"][:10], start=1):
                     breakdown = scored.get("score_breakdown", {})
+                    internal_product_id = scored.get("id") if _is_uuid(scored.get("id")) else None
+                    external_product_id = scored.get("external_product_id") or scored.get("id")
                     repo.create_result(
                         session_id=session_id,
-                        product_id=scored.get("id"),
-                        external_product_id=scored.get("external_product_id"),
+                        product_id=internal_product_id,
+                        external_product_id=external_product_id,
                         rank=rank,
                         total_score=scored.get("total_score", 0.0),
                         score_breakdown=breakdown,

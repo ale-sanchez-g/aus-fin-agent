@@ -143,3 +143,43 @@ def test_compliance_node_strips_prescriptive_language():
     assert "you should" not in result["narrative"].lower()
     assert "we recommend" not in result["narrative"].lower()
     assert len(result["compliance_notes"]) > 0
+
+
+def test_retrieval_normalizes_adapter_product_shape():
+    from app.agents.nodes.retrieval_node import _normalize_adapter_product
+
+    raw = {
+        "productId": "prod-123",
+        "providerId": "provider-1",
+        "productName": "Travel Rewards Card",
+        "productCategory": "CRED_AND_CHRG_CARDS",
+        "features": [{"featureType": "TRAVEL_INSURANCE"}],
+        "depositRates": [{"depositRateType": "VARIABLE", "rate": "0.049"}],
+        "fees": [{"feeType": "PERIODIC", "name": "Monthly fee", "amount": "10"}],
+    }
+
+    normalized = _normalize_adapter_product(raw)
+    assert normalized["external_product_id"] == "prod-123"
+    assert normalized["name"] == "Travel Rewards Card"
+    assert normalized["features"][0]["feature_type"] == "TRAVEL_INSURANCE"
+    assert normalized["rates"][0]["rate_type"] == "VARIABLE"
+    assert normalized["fees"][0]["fee_type"] == "PERIODIC"
+
+
+def test_retrieval_adapter_fallback_tries_credit_cards_for_travel(monkeypatch):
+    from app.agents.nodes import retrieval_node as retrieval
+
+    calls = []
+
+    async def fake_get_products(provider_id=None, category=None):
+        calls.append(category)
+        if category == "TRAVEL_CARDS":
+            return []
+        return [{"productId": "prod-456", "name": "Fallback Card", "productCategory": "CRED_AND_CHRG_CARDS"}]
+
+    monkeypatch.setattr(retrieval.adapter_client, "get_products", fake_get_products)
+
+    products = retrieval._fetch_products_from_adapter("TRAVEL_CARDS", "session-1")
+    assert calls == ["TRAVEL_CARDS", "CRED_AND_CHRG_CARDS"]
+    assert len(products) == 1
+    assert products[0]["name"] == "Fallback Card"
