@@ -39,24 +39,6 @@ services:
       timeout: 5s
       retries: 5
 
-  worker:
-    build:
-      context: apps/worker
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-      backend:
-        condition: service_healthy
-    env_file:
-      - .env
-    environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      CDR_BASE_URL: ${CDR_BASE_URL:-https://api.cdr.gov.au}
-      CDR_MOCK_MODE: ${CDR_MOCK_MODE:-true}
-    ports:
-      - "8001:8001"
-
   web:
     build:
       context: apps/web

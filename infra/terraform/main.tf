@@ -30,7 +30,7 @@ locals {
 }
 
 resource "aws_ecr_repository" "services" {
-  for_each = toset(["api", "web", "worker"])
+  for_each = toset(["api", "web"])
 
   name                 = "${var.project}-${each.key}"
   image_tag_mutability = "MUTABLE"
@@ -55,11 +55,6 @@ resource "aws_cloudwatch_log_group" "web" {
   tags              = local.common_tags
 }
 
-resource "aws_cloudwatch_log_group" "worker" {
-  name              = "/ecs/${local.name_prefix}/worker"
-  retention_in_days = 30
-  tags              = local.common_tags
-}
 
 resource "aws_s3_bucket" "reports" {
   bucket        = "${var.project}-reports-${var.environment}"
@@ -383,37 +378,6 @@ locals {
       }
     }
   ]
-
-  worker_container_definitions = [
-    {
-      name      = "worker"
-      image     = "${aws_ecr_repository.services["worker"].repository_url}:${var.worker_image_tag}"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 8001
-          hostPort      = 8001
-          protocol      = "tcp"
-        }
-      ]
-      environment = [
-        { name = "DATABASE_URL", value = local.database_url },
-        { name = "CDR_MOCK_MODE", value = tostring(var.cdr_mock_mode) },
-        { name = "CDR_BASE_URL", value = var.cdr_base_url },
-        { name = "SYNC_INTERVAL_HOURS", value = tostring(var.sync_interval_hours) },
-        { name = "ENVIRONMENT", value = var.environment },
-        { name = "AWS_REGION", value = var.aws_region }
-      ]
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.worker.name
-          awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "ecs"
-        }
-      }
-    }
-  ]
 }
 
 resource "aws_ecs_task_definition" "api" {
@@ -440,17 +404,6 @@ resource "aws_ecs_task_definition" "web" {
   tags                     = local.common_tags
 }
 
-resource "aws_ecs_task_definition" "worker" {
-  family                   = "${local.name_prefix}-worker"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = tostring(var.worker_task_cpu)
-  memory                   = tostring(var.worker_task_memory)
-  execution_role_arn       = aws_iam_role.ecs_execution.arn
-  task_role_arn            = aws_iam_role.ecs_task.arn
-  container_definitions    = jsonencode(local.worker_container_definitions)
-  tags                     = local.common_tags
-}
 
 resource "aws_ecs_service" "api" {
   name            = "${local.name_prefix}-api"
@@ -508,23 +461,3 @@ resource "aws_ecs_service" "web" {
   tags       = local.common_tags
 }
 
-resource "aws_ecs_service" "worker" {
-  name            = "${local.name_prefix}-worker"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.worker.arn
-  desired_count   = var.worker_desired_count
-  launch_type     = "FARGATE"
-
-  network_configuration {
-    subnets          = module.networking.private_subnet_ids
-    security_groups  = [module.networking.ecs_worker_sg_id]
-    assign_public_ip = false
-  }
-
-  deployment_circuit_breaker {
-    enable   = true
-    rollback = true
-  }
-
-  tags = local.common_tags
-}

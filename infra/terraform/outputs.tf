@@ -18,10 +18,6 @@ output "web_service_name" {
   value       = aws_ecs_service.web.name
 }
 
-output "worker_service_name" {
-  description = "ECS Worker service name."
-  value       = aws_ecs_service.worker.name
-}
 
 output "ecr_repository_urls" {
   description = "ECR repositories keyed by service name."

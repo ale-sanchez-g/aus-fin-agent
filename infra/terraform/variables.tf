@@ -33,11 +33,6 @@ variable "web_image_tag" {
   default     = "latest"
 }
 
-variable "worker_image_tag" {
-  description = "Container image tag to deploy for Worker."
-  type        = string
-  default     = "latest"
-}
 
 variable "api_desired_count" {
   description = "Number of running API tasks."
@@ -51,11 +46,6 @@ variable "web_desired_count" {
   default     = 1
 }
 
-variable "worker_desired_count" {
-  description = "Number of running Worker tasks."
-  type        = number
-  default     = 1
-}
 
 variable "api_task_cpu" {
   description = "CPU units for the API task definition."
@@ -81,17 +71,7 @@ variable "web_task_memory" {
   default     = 512
 }
 
-variable "worker_task_cpu" {
-  description = "CPU units for the Worker task definition."
-  type        = number
-  default     = 256
-}
 
-variable "worker_task_memory" {
-  description = "Memory (MiB) for the Worker task definition."
-  type        = number
-  default     = 512
-}
 
 variable "db_name" {
   description = "PostgreSQL database name."
@@ -130,11 +110,6 @@ variable "db_allocated_storage" {
   default     = 20
 }
 
-variable "sync_interval_hours" {
-  description = "Worker synchronization interval in hours."
-  type        = number
-  default     = 6
-}
 
 variable "cdr_mock_mode" {
   description = "Whether API and Worker run against mock CDR data."
