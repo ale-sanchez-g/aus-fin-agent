@@ -370,6 +370,9 @@ locals {
           protocol      = "tcp"
         }
       ]
+      environment = [
+        { name = "API_UPSTREAM", value = aws_lb.main.dns_name }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {

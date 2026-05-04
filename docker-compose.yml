@@ -64,6 +64,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    environment:
+      API_UPSTREAM: backend:8000
     ports:
       - "80:80"
 
