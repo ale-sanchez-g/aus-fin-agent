@@ -342,9 +342,9 @@ locals {
         { name = "AWS_BEDROCK_MODEL_ID", value = var.bedrock_model_id },
         { name = "S3_REPORTS_BUCKET", value = aws_s3_bucket.reports.bucket },
         { name = "ENVIRONMENT", value = var.environment },
-        { name = "COGNITO_USER_POOL_ID", value = aws_cognito_user_pool.main.id },
-        { name = "COGNITO_CLIENT_ID", value = aws_cognito_user_pool_client.web.id },
-        { name = "COGNITO_REGION", value = var.aws_region },
+        { name = "COGNITO_USER_POOL_ID", value = var.environment == "prod" ? aws_cognito_user_pool.main.id : "" },
+        { name = "COGNITO_CLIENT_ID", value = var.environment == "prod" ? aws_cognito_user_pool_client.web.id : "" },
+        { name = "COGNITO_REGION", value = var.environment == "prod" ? var.aws_region : "" },
         { name = "SECRET_KEY", value = var.api_secret_key }
       ]
       logConfiguration = {

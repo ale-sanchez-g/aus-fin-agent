@@ -38,6 +38,7 @@ class ReportArtifactCreate(ReportArtifactBase):
 
 class ReportArtifactResponse(ReportArtifactBase):
     id: str
+    content: Optional[dict] = None
     s3_key: Optional[str] = None
     local_path: Optional[str] = None
     created_at: datetime

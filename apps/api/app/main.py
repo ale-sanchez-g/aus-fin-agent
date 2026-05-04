@@ -7,9 +7,21 @@ import structlog
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.api.routes import health, products, discovery, reports, providers, auth
+from app.db.base import Base
+from app.db.session import engine
+import app.models  # noqa: F401
 
 configure_logging()
 log = structlog.get_logger()
+
+
+def _ensure_database_schema() -> None:
+    try:
+        Base.metadata.create_all(bind=engine)
+        log.info("database_schema_ready")
+    except Exception as exc:
+        log.error("database_schema_init_failed", error=str(exc))
+        raise
 
 
 def _log_aws_connectivity() -> None:
@@ -30,6 +42,7 @@ def _log_aws_connectivity() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("startup", environment=settings.ENVIRONMENT)
+    _ensure_database_schema()
     _log_aws_connectivity()
     yield
     log.info("shutdown")
