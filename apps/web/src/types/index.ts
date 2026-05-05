@@ -112,6 +112,7 @@ export interface DiscoverySession {
   status: SessionStatus;
   productCategory: ProductCategory;
   weightProfile: WeightProfile;
+  userIntent?: string;
   createdAt: string;
   completedAt?: string;
   errorMessage?: string;

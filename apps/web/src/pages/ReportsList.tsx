@@ -69,7 +69,7 @@ export function ReportsList() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-gray-200)' }}>
-                {['Session', 'Category', 'Completed', 'Action'].map(header => (
+                {['Report Name', 'ID', 'Category', 'Completed', 'Action'].map(header => (
                   <th
                     key={header}
                     style={{
@@ -89,14 +89,25 @@ export function ReportsList() {
             <tbody>
               {completedReports.map((session) => {
                 const categoryLabel = PRODUCT_CATEGORY_LABELS[session.productCategory] ?? session.productCategory;
+                const reportName = session.userIntent
+                  ? session.userIntent.length > 60
+                    ? `${session.userIntent.slice(0, 60)}…`
+                    : session.userIntent
+                  : `${categoryLabel} Report`;
+                const completedDate = session.completedAt
+                  ? new Date(session.completedAt).toLocaleString('en-AU')
+                  : new Date(session.createdAt).toLocaleString('en-AU');
                 return (
                   <tr key={session.id} style={{ borderBottom: '1px solid var(--color-gray-100)' }}>
-                    <td style={{ padding: '1rem 1.5rem', fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                      {session.id}
+                    <td style={{ padding: '1rem 1.5rem', fontSize: '0.875rem', fontWeight: 500 }}>
+                      {reportName}
+                    </td>
+                    <td style={{ padding: '1rem 1.5rem', fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>
+                      {session.id.slice(0, 8)}…
                     </td>
                     <td style={{ padding: '1rem 1.5rem', fontSize: '0.875rem' }}>{categoryLabel}</td>
                     <td style={{ padding: '1rem 1.5rem', color: 'var(--color-gray-600)', fontSize: '0.875rem' }}>
-                      {new Date(session.completedAt ?? session.createdAt).toLocaleString('en-AU')}
+                      {completedDate}
                     </td>
                     <td style={{ padding: '1rem 1.5rem' }}>
                       <Link to={`/reports/${session.id}`} style={{ fontWeight: 600 }}>
