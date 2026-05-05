@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     S3_REPORTS_BUCKET: str = "aus-fin-agent-reports-dev"
     ENVIRONMENT: str = "dev"
     FEATURE_FLAG_CONSENTED_DATA_MODE: bool = False
+    FEATURE_FLAG_LLM_RERANK: bool = False
+    FEATURE_FLAG_MCP_DETAIL_ENRICH: bool = False
     LOG_LEVEL: str = "INFO"
     SECRET_KEY: str = "dev-secret-key"
     DISCLAIMER_TEXT: str = (

@@ -5,10 +5,35 @@ log = structlog.get_logger()
 
 VEHICLE_KEYWORDS = {"car", "auto", "vehicle", "motor", "ute", "truck"}
 
+SEGMENT_KEYWORDS: dict[str, set[str]] = {
+    "vehicle": VEHICLE_KEYWORDS,
+    "agriculture": {
+        "farm",
+        "farming",
+        "farmer",
+        "primary producer",
+        "agribusiness",
+        "rural",
+    },
+    "business": {"business", "commercial", "merchant", "sme", "enterprise"},
+    "retirement": {"retirement", "retiree", "pension", "super", "smsf"},
+    "student": {"student", "youth", "apprentice"},
+}
+
 
 def _contains_keyword(text: str, keywords: set[str]) -> bool:
     lowered = text.lower()
     return any(keyword in lowered for keyword in keywords)
+
+
+def _is_segment_mismatch(product_text: str, user_intent: str) -> bool:
+    """Return True when product targets a niche segment absent from intent."""
+    for keywords in SEGMENT_KEYWORDS.values():
+        product_targets_segment = _contains_keyword(product_text, keywords)
+        intent_targets_segment = _contains_keyword(user_intent, keywords)
+        if product_targets_segment and not intent_targets_segment:
+            return True
+    return False
 
 
 def _matches_intent(product: dict, user_intent: str) -> bool:
@@ -29,6 +54,9 @@ def _matches_intent(product: dict, user_intent: str) -> bool:
     intent_mentions_vehicle = _contains_keyword(user_intent, VEHICLE_KEYWORDS)
 
     if product_is_vehicle_specific and not intent_mentions_vehicle:
+        return False
+
+    if _is_segment_mismatch(searchable, user_intent):
         return False
 
     return True

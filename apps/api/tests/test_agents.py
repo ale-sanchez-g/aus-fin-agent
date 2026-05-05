@@ -98,6 +98,92 @@ def test_eligibility_node_excludes_vehicle_loans_for_non_vehicle_intent():
     assert [product["id"] for product in result["eligible_products"]] == ["personal-loan"]
 
 
+def test_eligibility_node_excludes_farm_products_for_holiday_savings_intent():
+    from app.agents.nodes.eligibility_node import eligibility_node
+
+    state = AgentState(
+        session_id="test-farm-intent-filter",
+        user_intent="I want to save for a holiday in 3 months",
+        product_category="TERM_DEPOSITS",
+        preferences={},
+        constraints={},
+        weight_profile="balanced",
+        products=[
+            {
+                "id": "farm-term",
+                "name": "Farm Management Deposit account",
+                "description": "Designed for primary producers and farmers",
+                "category": "TERM_DEPOSITS",
+                "fees": [],
+                "rates": [],
+                "eligibility": [],
+            },
+            {
+                "id": "retail-term",
+                "name": "Standard 3 Month Term Deposit",
+                "description": "A fixed term deposit for personal savings goals",
+                "category": "TERM_DEPOSITS",
+                "fees": [],
+                "rates": [],
+                "eligibility": [],
+            },
+        ],
+        eligible_products=[],
+        scored_products=[],
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = eligibility_node(state)
+    assert [product["id"] for product in result["eligible_products"]] == ["retail-term"]
+
+
+def test_eligibility_node_keeps_farm_products_for_farm_intent():
+    from app.agents.nodes.eligibility_node import eligibility_node
+
+    state = AgentState(
+        session_id="test-farm-intent-include",
+        user_intent="I am a farmer looking for a farm management deposit",
+        product_category="TERM_DEPOSITS",
+        preferences={},
+        constraints={},
+        weight_profile="balanced",
+        products=[
+            {
+                "id": "farm-term",
+                "name": "Farm Management Deposit account",
+                "description": "Designed for primary producers and farmers",
+                "category": "TERM_DEPOSITS",
+                "fees": [],
+                "rates": [],
+                "eligibility": [],
+            },
+            {
+                "id": "retail-term",
+                "name": "Standard 3 Month Term Deposit",
+                "description": "A fixed term deposit for personal savings goals",
+                "category": "TERM_DEPOSITS",
+                "fees": [],
+                "rates": [],
+                "eligibility": [],
+            },
+        ],
+        eligible_products=[],
+        scored_products=[],
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = eligibility_node(state)
+    assert [product["id"] for product in result["eligible_products"]] == ["farm-term", "retail-term"]
+
+
 def test_scoring_node_scores_and_sorts():
     state = AgentState(
         session_id="test-789",
@@ -238,6 +324,52 @@ def test_scoring_node_uses_intent_relevance_for_sparse_products():
     assert len(scored) == 2
     assert scored[0]["id"] == "novated"
     assert scored[0]["total_score"] > scored[1]["total_score"]
+
+
+def test_scoring_node_demotes_niche_products_for_generic_goal():
+    state = AgentState(
+        session_id="test-793",
+        user_intent="I want to save for a Fiji holiday in 3 months",
+        product_category="TERM_DEPOSITS",
+        preferences={"target_rate": 0.04},
+        constraints={},
+        weight_profile="rate_focused",
+        products=[],
+        eligible_products=[
+            {
+                "id": "farm-deposit",
+                "provider_id": "bank-a",
+                "name": "Farm Management Deposit",
+                "description": "Designed for primary producers and farmers",
+                "category": "TERM_DEPOSITS",
+                "fees": [{"fee_type": "PERIODIC", "amount": "0.00"}],
+                "rates": [{"rate_type": "DEPOSIT", "rate": "0.052"}],
+                "features": [{"feature_type": "DIGITAL_BANKING"}],
+            },
+            {
+                "id": "retail-deposit",
+                "provider_id": "bank-b",
+                "name": "3 Month Term Deposit",
+                "description": "Short term personal savings term deposit",
+                "category": "TERM_DEPOSITS",
+                "fees": [{"fee_type": "PERIODIC", "amount": "0.00"}],
+                "rates": [{"rate_type": "DEPOSIT", "rate": "0.047"}],
+                "features": [{"feature_type": "DIGITAL_BANKING"}],
+            },
+        ],
+        scored_products=[],
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = scoring_node(state)
+    scored = result["scored_products"]
+
+    assert scored[0]["id"] == "retail-deposit"
+    assert result["ranking_metadata"]["intent_relevance_applied"] is True
 
 
 def test_scoring_node_spreads_identical_tied_scores():

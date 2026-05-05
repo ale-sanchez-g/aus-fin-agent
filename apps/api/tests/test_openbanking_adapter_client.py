@@ -107,3 +107,42 @@ def test_get_products_paginates_list_banking_products(monkeypatch):
     assert "ANZ Three" in names
     anz_pages = [page for bank_id, page in calls if bank_id == "anz"]
     assert anz_pages == [1, 2]
+
+
+def test_get_products_enriches_with_product_detail(monkeypatch):
+    client = MCPAdapterClient()
+    monkeypatch.setattr(settings, "CDR_MOCK_MODE", False)
+    monkeypatch.setattr(settings, "FEATURE_FLAG_MCP_DETAIL_ENRICH", True)
+    monkeypatch.setattr(client, "_dismiss_disclaimer", _noop)
+    monkeypatch.setattr(adapter_module, "_DISCOVERY_BANK_IDS", ["anz"])
+    monkeypatch.setattr(adapter_module, "_MCP_PAGE_SIZE", 100)
+
+    async def _fake_call(tool_name: str, args: dict):
+        if tool_name == "list_banking_products":
+            return (
+                "| Product ID | Product | Category |\n"
+                "| --- | --- | --- |\n"
+                "| prod-123 | [ANZ Holiday Saver](https://anz/holiday) | TERM_DEPOSITS |\n"
+            )
+        if tool_name == "get_banking_product":
+            return {
+                "product": {
+                    "name": "ANZ Holiday Saver",
+                    "description": "Designed for personal savings goals",
+                    "productCategory": "TERM_DEPOSITS",
+                    "features": [{"featureType": "DIGITAL_BANKING"}],
+                    "fees": [{"feeType": "PERIODIC", "amount": "0"}],
+                    "depositRates": [{"depositRateType": "DEPOSIT", "rate": "0.047"}],
+                    "eligibility": [{"eligibilityType": "MIN_AGE", "additionalValue": "18"}],
+                }
+            }
+        return ""
+
+    monkeypatch.setattr(client, "_call_mcp_tool", _fake_call)
+
+    products = asyncio.run(client.get_products(category="TERM_DEPOSITS"))
+
+    assert len(products) == 1
+    assert products[0]["description"] == "Designed for personal savings goals"
+    assert products[0]["features"][0]["featureType"] == "DIGITAL_BANKING"
+    assert products[0]["depositRates"][0]["rate"] == "0.047"

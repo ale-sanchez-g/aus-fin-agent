@@ -7,6 +7,7 @@ from the bundled JSON fixture instead of spawning the MCP process.
 import json
 import re
 import time
+import asyncio
 import structlog
 from app.core.config import settings
 
@@ -26,6 +27,8 @@ _DISCOVERY_BANK_IDS = [
 
 _MCP_PAGE_SIZE = 100
 _MCP_MAX_PAGES_PER_BANK = 50
+_MCP_DETAIL_ENRICH_LIMIT_PER_BANK = 30
+_MCP_TOOL_CALL_TIMEOUT_SECONDS = 20
 
 # Path to the mock fixture bundled with this service
 _MOCK_FIXTURE_PATH = "/app/mock-cdr-data.json"
@@ -85,26 +88,30 @@ class MCPAdapterClient:
 
         self._check_circuit()
         try:
-            client = MultiServerMCPClient(
-                {
-                    "open_banking": {
-                        "command": "npx",
-                        "args": ["open-banking-mcp"],
-                        "env": {"CDR_BASE_URL": settings.CDR_BASE_URL},
-                        "transport": "stdio",
+            async def _invoke() -> dict | list | str:
+                client = MultiServerMCPClient(
+                    {
+                        "open_banking": {
+                            "command": "npx",
+                            "args": ["open-banking-mcp"],
+                            "env": {"CDR_BASE_URL": settings.CDR_BASE_URL},
+                            "transport": "stdio",
+                        }
                     }
-                }
-            )
-            async with client.session("open_banking") as session:
-                call_result = await session.call_tool(tool_name, arguments=args)
-                self._record_success()
-                if not call_result.content:
-                    return {}
-                text = call_result.content[0].text
-                try:
-                    return json.loads(text)
-                except Exception:
-                    return text
+                )
+                async with client.session("open_banking") as session:
+                    call_result = await session.call_tool(tool_name, arguments=args)
+                    if not call_result.content:
+                        return {}
+                    text = call_result.content[0].text
+                    try:
+                        return json.loads(text)
+                    except Exception:
+                        return text
+
+            result = await asyncio.wait_for(_invoke(), timeout=_MCP_TOOL_CALL_TIMEOUT_SECONDS)
+            self._record_success()
+            return result
         except Exception as exc:
             self._record_failure()
             log.error("mcp_tool_call_failed", tool=tool_name, error=str(exc))
@@ -157,6 +164,59 @@ class MCPAdapterClient:
         slug = re.sub(r"[^a-zA-Z0-9]+", "-", (value or "").strip().lower()).strip("-")
         return slug or "unknown"
 
+    def _extract_product_id(self, row: dict[str, str]) -> str | None:
+        for key in ("Product ID", "Product Id", "productId", "ID", "Id"):
+            value = (row.get(key) or "").strip().strip("`")
+            if value:
+                return value
+        return None
+
+    async def _fetch_product_detail(self, bank_id: str, product_id: str) -> dict:
+        try:
+            result = await self._call_mcp_tool(
+                "get_banking_product",
+                {"bankId": bank_id, "productId": product_id},
+            )
+            if isinstance(result, dict):
+                if isinstance(result.get("product"), dict):
+                    return result["product"]
+                return result
+            return {}
+        except Exception as exc:
+            log.debug(
+                "mcp_get_banking_product_failed",
+                bank_id=bank_id,
+                product_id=product_id,
+                error=str(exc),
+            )
+            return {}
+
+    def _merge_product_detail(self, base_product: dict, detail: dict) -> dict:
+        if not detail:
+            return base_product
+
+        merged = {**base_product}
+        merged["name"] = detail.get("name") or merged.get("name")
+        merged["productName"] = merged.get("name")
+        merged["productCategory"] = detail.get("productCategory") or merged.get("productCategory")
+        merged["description"] = detail.get("description") or merged.get("description")
+        merged["brandName"] = detail.get("brandName") or merged.get("brandName")
+        merged["applicationUri"] = detail.get("applicationUri") or merged.get("applicationUri")
+        merged["isTailored"] = bool(detail.get("isTailored", merged.get("isTailored", False)))
+
+        if detail.get("features"):
+            merged["features"] = detail.get("features")
+        if detail.get("fees"):
+            merged["fees"] = detail.get("fees")
+        if detail.get("eligibility"):
+            merged["eligibility"] = detail.get("eligibility")
+        if detail.get("depositRates"):
+            merged["depositRates"] = detail.get("depositRates")
+        if detail.get("lendingRates"):
+            merged["lendingRates"] = detail.get("lendingRates")
+
+        return merged
+
     async def _fetch_credit_cards(self, category: str | None) -> list[dict]:
         queries = ["travel"] if category == "TRAVEL_CARDS" else ["all", "travel", "cashback", "zero-fee"]
 
@@ -205,6 +265,7 @@ class MCPAdapterClient:
     async def _fetch_all_products_for_bank(self, bank_id: str, category: str) -> list[dict]:
         products: list[dict] = []
         seen_page_signatures: set[tuple[str, ...]] = set()
+        details_fetched = 0
 
         for page in range(1, _MCP_MAX_PAGES_PER_BANK + 1):
             result = await self._call_mcp_tool(
@@ -233,23 +294,32 @@ class MCPAdapterClient:
             for row in rows:
                 product_cell = row.get("Product", "")
                 product_name, product_url = self._extract_markdown_link(product_cell)
-                products.append(
-                    {
-                        "productId": f"{bank_id}:{self._slug(product_name)}",
-                        "providerId": bank_id,
-                        "name": product_name,
-                        "productName": product_name,
-                        "productCategory": row.get("Category", category) or category,
-                        "brandName": bank_id,
-                        "applicationUri": product_url,
-                        "isTailored": False,
-                        "fees": [],
-                        "features": [],
-                        "depositRates": [],
-                        "lendingRates": [],
-                        "eligibility": [],
-                    }
-                )
+                product_id = self._extract_product_id(row) or f"{bank_id}:{self._slug(product_name)}"
+                base_product = {
+                    "productId": product_id,
+                    "providerId": bank_id,
+                    "name": product_name,
+                    "productName": product_name,
+                    "productCategory": row.get("Category", category) or category,
+                    "brandName": bank_id,
+                    "applicationUri": product_url,
+                    "isTailored": False,
+                    "fees": [],
+                    "features": [],
+                    "depositRates": [],
+                    "lendingRates": [],
+                    "eligibility": [],
+                }
+
+                if (
+                    settings.FEATURE_FLAG_MCP_DETAIL_ENRICH
+                    and details_fetched < _MCP_DETAIL_ENRICH_LIMIT_PER_BANK
+                ):
+                    detail = await self._fetch_product_detail(bank_id=bank_id, product_id=product_id)
+                    products.append(self._merge_product_detail(base_product, detail))
+                    details_fetched += 1
+                else:
+                    products.append(base_product)
 
             if len(rows) < _MCP_PAGE_SIZE:
                 break
