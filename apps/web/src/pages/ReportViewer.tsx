@@ -116,6 +116,27 @@ export function ReportViewer() {
                       </span>
                     </p>
                   )}
+                  {result.product.applicationUri && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <a
+                        href={result.product.applicationUri}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block',
+                          padding: '0.4rem 1rem',
+                          background: 'var(--color-primary)',
+                          color: 'white',
+                          borderRadius: 'var(--radius)',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        Apply Now
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
