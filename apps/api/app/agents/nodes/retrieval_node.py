@@ -29,13 +29,24 @@ def _fetch_products(category: str | None, session_id: str | None) -> list[dict]:
         db = SessionLocal()
         try:
             repo = ProductRepository(db)
-            items, total = repo.list_products(
+            if category:
+                detailed = repo.get_products_for_category(category=category, limit=200)
+                if detailed:
+                    return detailed
+
+            items, _ = repo.list_products(
                 page=1,
                 page_size=200,
                 category=category,
                 is_active=True,
             )
             if items:
+                product_ids = [str(getattr(item, "id", "")) for item in items if getattr(item, "id", None)]
+                if product_ids:
+                    detailed_rows = repo.get_products_by_ids(product_ids)
+                    if detailed_rows:
+                        return [_product_detail_to_dict(row) for row in detailed_rows]
+
                 return [_product_summary_to_dict(p) for p in items]
         finally:
             db.close()
@@ -173,6 +184,15 @@ def _product_summary_to_dict(product) -> dict:
     """Convert ProductSummary schema or ORM object to dict for agent processing."""
     if hasattr(product, "model_dump"):
         return product.model_dump()
+    if hasattr(product, "__dict__"):
+        return {k: v for k, v in product.__dict__.items() if not k.startswith("_")}
+    return dict(product)
+
+
+def _product_detail_to_dict(product) -> dict:
+    """Convert ProductResponse schema to dict for agent processing."""
+    if hasattr(product, "model_dump"):
+        return product.model_dump(mode="json")
     if hasattr(product, "__dict__"):
         return {k: v for k, v in product.__dict__.items() if not k.startswith("_")}
     return dict(product)

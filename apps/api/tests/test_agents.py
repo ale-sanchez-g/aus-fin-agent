@@ -196,6 +196,79 @@ def test_scoring_node_diversifies_tied_providers():
     assert result["ranking_metadata"]["tie_diversification_applied"] is True
 
 
+def test_scoring_node_uses_intent_relevance_for_sparse_products():
+    state = AgentState(
+        session_id="test-791",
+        user_intent="Need a novated lease with salary packaging",
+        product_category="LEASES",
+        preferences={},
+        constraints={},
+        weight_profile="balanced",
+        products=[],
+        eligible_products=[
+            {
+                "id": "novated",
+                "provider_id": "bank-a",
+                "name": "Novated Lease",
+                "category": "LEASES",
+                "fees": [],
+                "rates": [],
+                "features": [],
+            },
+            {
+                "id": "finance",
+                "provider_id": "bank-b",
+                "name": "Finance Lease",
+                "category": "LEASES",
+                "fees": [],
+                "rates": [],
+                "features": [],
+            },
+        ],
+        scored_products=[],
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = scoring_node(state)
+    scored = result["scored_products"]
+    assert len(scored) == 2
+    assert scored[0]["id"] == "novated"
+    assert scored[0]["total_score"] > scored[1]["total_score"]
+
+
+def test_scoring_node_spreads_identical_tied_scores():
+    state = AgentState(
+        session_id="test-792",
+        user_intent="lease options",
+        product_category="LEASES",
+        preferences={},
+        constraints={},
+        weight_profile="balanced",
+        products=[],
+        eligible_products=[
+            {"id": "a", "provider_id": "p1", "name": "Lease A", "fees": [], "rates": [], "features": []},
+            {"id": "b", "provider_id": "p2", "name": "Lease B", "fees": [], "rates": [], "features": []},
+            {"id": "c", "provider_id": "p3", "name": "Lease C", "fees": [], "rates": [], "features": []},
+        ],
+        scored_products=[],
+        narrative="",
+        compliance_notes=[],
+        report={},
+        error=None,
+        status="running",
+    )
+
+    result = scoring_node(state)
+    totals = [p["total_score"] for p in result["scored_products"]]
+
+    assert totals[0] > totals[1] > totals[2]
+    assert result["ranking_metadata"]["tie_spread_applied"] is True
+
+
 def test_report_node_includes_tie_diversification_metadata(monkeypatch):
     from app.agents.nodes.report_node import report_node
     from app.agents.nodes import report_node as report_node_module
@@ -328,3 +401,55 @@ def test_retrieval_adapter_fallback_tries_credit_cards_for_travel(monkeypatch):
     assert calls == ["TRAVEL_CARDS", "CRED_AND_CHRG_CARDS"]
     assert len(products) == 1
     assert products[0]["name"] == "Fallback Card"
+
+
+def test_retrieval_prefers_detailed_db_products(monkeypatch):
+    from app.agents.nodes import retrieval_node as retrieval
+
+    class _FakeSession:
+        def close(self):
+            return None
+
+    class _DetailedProduct:
+        def __init__(self, product_id: str):
+            self.id = product_id
+
+        def model_dump(self, mode="json"):
+            return {
+                "id": self.id,
+                "name": "Detailed Account",
+                "category": "TRANS_AND_SAVINGS_ACCOUNTS",
+                "features": [{"feature_type": "DIGITAL_BANKING"}],
+                "rates": [{"rate_type": "DEPOSIT", "rate": "0.045"}],
+                "fees": [{"fee_type": "PERIODIC", "amount": "3"}],
+                "eligibility": [],
+            }
+
+    class _FakeSummary:
+        id = "prod-1"
+
+    class _FakeRepo:
+        def __init__(self, _db):
+            pass
+
+        def get_products_for_category(self, category, limit=200):
+            assert category == "TRANS_AND_SAVINGS_ACCOUNTS"
+            return []
+
+        def list_products(self, **kwargs):
+            return ([_FakeSummary()], 1)
+
+        def get_products_by_ids(self, product_ids):
+            assert product_ids == ["prod-1"]
+            return [_DetailedProduct("prod-1")]
+
+    monkeypatch.setattr("app.db.session.SessionLocal", lambda: _FakeSession())
+    monkeypatch.setattr("app.repositories.product_repository.ProductRepository", _FakeRepo)
+
+    products = retrieval._fetch_products("TRANS_AND_SAVINGS_ACCOUNTS", "session-1")
+
+    assert len(products) == 1
+    assert products[0]["name"] == "Detailed Account"
+    assert products[0]["rates"][0]["rate"] == "0.045"
+    assert products[0]["fees"][0]["amount"] == "3"
+    assert products[0]["features"][0]["feature_type"] == "DIGITAL_BANKING"

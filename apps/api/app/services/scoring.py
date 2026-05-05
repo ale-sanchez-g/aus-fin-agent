@@ -1,6 +1,7 @@
 from dataclasses import dataclass, asdict
 from typing import Any
 from enum import Enum
+import re
 
 DIGITAL_FEATURE_TYPES = {
     "DIGITAL_BANKING",
@@ -19,6 +20,28 @@ VALUABLE_FEATURE_TYPES = {
     "INSURANCE",
     "TRAVEL_INSURANCE",
     "BALANCE_TRANSFERS",
+}
+
+_STOP_WORDS = {
+    "a",
+    "an",
+    "and",
+    "as",
+    "at",
+    "be",
+    "by",
+    "for",
+    "from",
+    "in",
+    "is",
+    "it",
+    "of",
+    "on",
+    "or",
+    "that",
+    "the",
+    "to",
+    "with",
 }
 
 
@@ -98,6 +121,11 @@ def _parse_rate(value: Any) -> float:
         return float(str(value).strip())
     except (ValueError, TypeError):
         return 0.0
+
+
+def _tokenize_text(value: str) -> set[str]:
+    tokens = set(re.findall(r"[a-z0-9]{3,}", (value or "").lower()))
+    return {token for token in tokens if token not in _STOP_WORDS}
 
 
 class ScoringEngine:
@@ -273,10 +301,33 @@ class ScoringEngine:
             score += 5.0
         if product.get("application_uri"):
             score += 5.0
-        if product.get("rates"):
+        rates = product.get("rates") or []
+        fees = product.get("fees") or []
+        if rates:
             score += 5.0
-        if product.get("fees") is not None:
+        if fees:
             score += 5.0
+
+        # When product metadata is sparse, use lexical intent matching to
+        # differentiate similarly structured products.
+        user_intent = str(preferences.get("user_intent") or "")
+        if user_intent:
+            intent_tokens = _tokenize_text(user_intent)
+            product_text = " ".join(
+                str(v)
+                for v in [
+                    product.get("name"),
+                    product.get("description"),
+                    product.get("category"),
+                    product.get("brand"),
+                    product.get("brand_name"),
+                ]
+                if v
+            )
+            product_tokens = _tokenize_text(product_text)
+            if intent_tokens and product_tokens:
+                overlap_ratio = len(intent_tokens & product_tokens) / len(intent_tokens)
+                score += min(15.0, overlap_ratio * 15.0)
 
         return round(min(100.0, score), 2)
 

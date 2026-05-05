@@ -53,6 +53,38 @@ def _diversify_tied_scores(scored: list[dict]) -> tuple[list[dict], bool]:
     return diversified, tie_diversification_applied
 
 
+def _spread_tied_scores(scored: list[dict], step: float = 0.1) -> tuple[list[dict], bool]:
+    """Apply small deterministic deltas to tied totals while preserving order.
+
+    This keeps ranking stable but avoids rendering identical percentages when
+    upstream data is too sparse to produce naturally distinct totals.
+    """
+    if not scored:
+        return scored, False
+
+    tie_spread_applied = False
+    index = 0
+    while index < len(scored):
+        base_score = float(scored[index].get("total_score", 0.0))
+        group_end = index + 1
+        while group_end < len(scored) and float(scored[group_end].get("total_score", 0.0)) == base_score:
+            group_end += 1
+
+        group_size = group_end - index
+        if group_size > 1:
+            tie_spread_applied = True
+            for offset in range(group_size):
+                adjusted = round(max(0.0, base_score - (offset * step)), 2)
+                scored[index + offset]["total_score"] = adjusted
+                breakdown = scored[index + offset].get("score_breakdown")
+                if isinstance(breakdown, dict):
+                    breakdown["total"] = adjusted
+
+        index = group_end
+
+    return scored, tie_spread_applied
+
+
 def scoring_node(state: AgentState) -> dict:
     log.info("scoring_node", session_id=state.get("session_id"))
     try:
@@ -62,7 +94,11 @@ def scoring_node(state: AgentState) -> dict:
         weight_profile_str = state.get("weight_profile") or "balanced"
 
         # Merge constraints into preferences for scoring
-        merged_prefs = {**preferences, **constraints}
+        merged_prefs = {
+            **preferences,
+            **constraints,
+            "user_intent": state.get("user_intent", ""),
+        }
 
         try:
             profile = WeightProfile(weight_profile_str)
@@ -81,6 +117,7 @@ def scoring_node(state: AgentState) -> dict:
 
         scored.sort(key=lambda p: p["total_score"], reverse=True)
         scored, tie_diversification_applied = _diversify_tied_scores(scored)
+        scored, tie_spread_applied = _spread_tied_scores(scored)
 
         log.info(
             "scoring_complete",
@@ -90,6 +127,7 @@ def scoring_node(state: AgentState) -> dict:
         )
         ranking_metadata = {
             "tie_diversification_applied": tie_diversification_applied,
+            "tie_spread_applied": tie_spread_applied,
         }
         return {
             **state,
