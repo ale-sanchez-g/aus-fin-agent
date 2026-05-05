@@ -1,0 +1,14 @@
+# Copy this file and pass it with -var-file for your target environment.
+# Sensitive values should be set via CI/CD secrets or your local shell, not committed.
+
+environment       = "dev"
+project           = "aus-fin-agent"
+aws_region        = "ap-southeast-2"
+
+# Optional image tags (default: latest)
+api_image_tag     = "latest"
+web_image_tag     = "latest"
+
+# Strongly recommended to override in real environments
+api_secret_key    = "replace-with-a-strong-secret"
+db_password       = "replace-with-a-strong-password"
